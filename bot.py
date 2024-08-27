@@ -10,7 +10,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Variables globales
-uvb_stream_url = 'http://stream.priyom.org:8000/pip-night.ogg'  # URL du stream UVB-76
+uvb_stream_url = 'http://websdr.ru/?tune=4326am'  # URL du stream UVB-76
 
 # Fonction pour jouer le stream UVB-76
 async def play_uvb_stream(vc):
