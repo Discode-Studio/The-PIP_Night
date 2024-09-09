@@ -45,6 +45,9 @@ jobs:
         sudo mv chromedriver /usr/local/bin/chromedriver
         sudo chmod +x /usr/local/bin/chromedriver
 
+    - name: install ytdl Spotify
+      run: pip install youtube-dl spotify
+
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
