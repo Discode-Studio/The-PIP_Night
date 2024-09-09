@@ -3,30 +3,36 @@ const API_URL = 'http://localhost:5000';
 
 // Function to fetch and display available tracks
 async function fetchTracks() {
-    const response = await fetch(`${API_URL}/tracks`);
-    const data = await response.json();
-    const tracks = data.tracks;
-    const currentTrack = data.current_track;
-    const loop = data.loop;
-
-    const selectElement = document.getElementById('track-select');
-    selectElement.innerHTML = ''; // Clear current options
-
-    tracks.forEach(track => {
-        const option = document.createElement('option');
-        option.value = track;
-        option.textContent = track;
+    try {
+        const response = await fetch(`${API_URL}/tracks`);
+        const data = await response.json();
         
-        // Highlight the currently playing track
-        if (track === currentTrack) {
-            option.selected = true;
+        // Check if tracks are available
+        if (Array.isArray(data.tracks)) {
+            const selectElement = document.getElementById('track-select');
+            selectElement.innerHTML = ''; // Clear current options
+
+            data.tracks.forEach(track => {
+                const option = document.createElement('option');
+                option.value = track;
+                option.textContent = track;
+                
+                // Highlight the currently playing track
+                if (track === data.current_track) {
+                    option.selected = true;
+                }
+
+                selectElement.appendChild(option);
+            });
+
+            // Update loop button text
+            document.getElementById('loop-btn').textContent = data.loop ? 'Disable Loop' : 'Enable Loop';
+        } else {
+            console.error('Invalid tracks data received from API.');
         }
-
-        selectElement.appendChild(option);
-    });
-
-    // Update loop button text
-    document.getElementById('loop-btn').textContent = loop ? 'Disable Loop' : 'Enable Loop';
+    } catch (error) {
+        console.error('Error fetching tracks:', error);
+    }
 }
 
 // Function to play a selected track
@@ -34,36 +40,48 @@ async function playTrack() {
     const selectElement = document.getElementById('track-select');
     const track = selectElement.value;
 
-    const response = await fetch(`${API_URL}/play`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ track })
-    });
-    const result = await response.json();
-    console.log(result.message);
-    fetchTracks();  // Update the list to reflect current playing track
+    try {
+        const response = await fetch(`${API_URL}/play`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ track })
+        });
+        const result = await response.json();
+        console.log(result.message);
+        fetchTracks();  // Update the list to reflect current playing track
+    } catch (error) {
+        console.error('Error playing track:', error);
+    }
 }
 
 // Function to stop playback
 async function stopTrack() {
-    const response = await fetch(`${API_URL}/stop`, {
-        method: 'POST'
-    });
-    const result = await response.json();
-    console.log(result.message);
-    fetchTracks();  // Update the list after stopping
+    try {
+        const response = await fetch(`${API_URL}/stop`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        console.log(result.message);
+        fetchTracks();  // Update the list after stopping
+    } catch (error) {
+        console.error('Error stopping track:', error);
+    }
 }
 
 // Function to toggle loop mode
 async function toggleLoop() {
-    const response = await fetch(`${API_URL}/loop`, {
-        method: 'POST'
-    });
-    const result = await response.json();
-    console.log(result.message);
-    fetchTracks();  // Update loop button after toggling
+    try {
+        const response = await fetch(`${API_URL}/loop`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        console.log(result.message);
+        fetchTracks();  // Update loop button after toggling
+    } catch (error) {
+        console.error('Error toggling loop:', error);
+    }
 }
 
 // Add event listeners to buttons
