@@ -1,41 +1,65 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sound Control</title>
-    <script>
-        async function playSound(sound) {
-            const loop = document.getElementById('loop').checked;
-            const response = await fetch('/play', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sound: sound, loop: loop })
-            });
-            const data = await response.json();
-            document.getElementById('logs').innerText = `Playing ${sound} ${loop ? 'in loop' : ''}.`;
+    <title>Discord Music Bot Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
         }
-
-        async function stopSound() {
-            await fetch('/stop', { method: 'POST' });
-            document.getElementById('logs').innerText = 'Stopped playing.';
+        h1 {
+            text-align: center;
         }
-    </script>
+        #track-list {
+            margin-top: 20px;
+        }
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        button.stop {
+            background-color: #dc3545;
+        }
+        button.stop:hover {
+            background-color: #c82333;
+        }
+    </style>
 </head>
 <body>
-    <h1>Sound Control</h1>
-    <button onclick="playSound('beep1')">Play Beep1</button>
-    <button onclick="playSound('beep2')">Play Beep2</button>
-    <button onclick="playSound('beep3')">Play Beep3</button>
-    <button onclick="playSound('msbuzzer')">Play MS Buzzer</button>
-    <button onclick="playSound('uvb76')">Play UVB-76 WebSDR</button>
-    <br><br>
-    <label>
-        <input type="checkbox" id="loop"> Loop
-    </label>
-    <br><br>
-    <button onclick="stopSound()">Stop</button>
-    <br><br>
-    <div id="logs"></div>
+
+    <h1>Discord Music Bot Controller</h1>
+    
+    <div id="track-list">
+        <h3>Select a Track:</h3>
+        <select id="track-select"></select>
+    </div>
+    
+    <div id="controls">
+        <button id="play-btn">Play</button>
+        <button id="stop-btn" class="stop">Stop</button>
+        <button id="loop-btn">Toggle Loop</button>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
