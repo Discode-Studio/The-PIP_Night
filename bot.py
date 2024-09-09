@@ -22,8 +22,8 @@ current_track = None
 loop = False
 
 # Spotify setup
-SPOTIPY_CLIENT_ID = 'your_spotify_client_id'
-SPOTIPY_CLIENT_SECRET = 'your_spotify_client_secret'
+SPOTIPY_CLIENT_ID = 'edf8299cab7d4f6fbb34d030cdd91a12'
+SPOTIPY_CLIENT_SECRET = '6afde91c803b423f9f3051e2ae88018f'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET))
 
 # Supported file types
@@ -41,7 +41,7 @@ def fetch_tracks_from_spotify(playlist_id):
     return tracks
 
 # Function to update available tracks
-playlist_id = 'your_spotify_playlist_id'  # Replace with your playlist ID
+playlist_id = '4Ma9iJLpfuN5OVHW46DL0e?si=_rcVi-cPQQalWb7rqbi0Aw'  # Replace with your playlist ID
 available_tracks = fetch_tracks_from_spotify(playlist_id)
 
 # API route to get list of tracks
