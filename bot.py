@@ -1,119 +1,90 @@
 import discord
 from discord.ext import commands
-from flask import Flask, jsonify, request
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 import asyncio
 import os
-import requests
-import threading
-from spotipy.oauth2 import SpotifyClientCredentials
-import spotipy
-import youtube_dl
+import re
 
 # Bot Discord setup
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Flask setup for API
-app = Flask(__name__)
-
-# Variables for playback
-current_track = None
-loop = False
-
 # Spotify setup
 SPOTIPY_CLIENT_ID = 'edf8299cab7d4f6fbb34d030cdd91a12'
 SPOTIPY_CLIENT_SECRET = '6afde91c803b423f9f3051e2ae88018f'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET))
 
-# Supported file types
-SUPPORTED_FILE_TYPES = ['.mp3', '.ogg', '.wav']
+# Variables for playback
+playlist_url = 'https://open.spotify.com/playlist/4Ma9iJLpfuN5OVHW46DL0e'
+available_tracks = []
 
-# Function to get music files from Spotify playlist
-def fetch_tracks_from_spotify(playlist_id):
+# Extract the playlist ID from URL
+def extract_playlist_id(url):
+    match = re.search(r'playlist/([^/?]+)', url)
+    if match:
+        return match.group(1)
+    raise ValueError("Invalid Spotify playlist URL")
+
+# Function to get tracks from Spotify playlist
+def fetch_tracks_from_spotify(playlist_url):
+    playlist_id = extract_playlist_id(playlist_url)
     playlist = sp.playlist_tracks(playlist_id)
     tracks = []
     for item in playlist['items']:
         track = item['track']
         preview_url = track['preview_url']
-        if preview_url and any(preview_url.endswith(ext) for ext in SUPPORTED_FILE_TYPES):
+        if preview_url:
             tracks.append(preview_url)
     return tracks
 
-# Function to update available tracks
-playlist_id = '4Ma9iJLpfuN5OVHW46DL0e?si=_rcVi-cPQQalWb7rqbi0Aw'  # Replace with your playlist ID
-available_tracks = fetch_tracks_from_spotify(playlist_id)
+# Initialize available tracks
+available_tracks = fetch_tracks_from_spotify(playlist_url)
 
-# API route to get list of tracks
-@app.route('/tracks', methods=['GET'])
-def get_tracks():
-    global available_tracks
-    # Fetch updated list from Spotify each time (or could cache for performance)
-    available_tracks = fetch_tracks_from_spotify(playlist_id)
-    return jsonify({'tracks': available_tracks, 'current_track': current_track, 'loop': loop})
+# Bot commands to control audio
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user.name}')
 
-# API route to play a track
-@app.route('/play', methods=['POST'])
-def play_track():
-    global current_track
-    track = request.json.get('track')
-    if track in available_tracks:
-        current_track = track
-        # Trigger the bot to play the track
-        asyncio.run_coroutine_threadsafe(play_audio(track), bot.loop)
-        return jsonify({'message': f'Playing {track}'})
-    return jsonify({'error': 'Track not found'}), 404
+    # Ensure we start playing the playlist in the first voice channel found
+    for guild in bot.guilds:
+        voice_channel = discord.utils.get(guild.voice_channels, name="On demand music")
+        if voice_channel:
+            await play_playlist(voice_channel)
+            break
 
-# API route to stop playing
-@app.route('/stop', methods=['POST'])
-def stop_track():
-    asyncio.run_coroutine_threadsafe(stop_audio(), bot.loop)
-    return jsonify({'message': 'Playback stopped'})
+async def play_playlist(vc):
+    while True:
+        for track_url in available_tracks:
+            if vc.is_playing():
+                vc.stop()
+            source = discord.FFmpegPCMAudio(track_url)
+            vc.play(source)
+            while vc.is_playing():
+                await asyncio.sleep(1)
+        # Repeat playlist
+        await asyncio.sleep(1)
 
-# API route to toggle loop
-@app.route('/loop', methods=['POST'])
-def toggle_loop():
-    global loop
-    loop = not loop
-    return jsonify({'message': 'Looping is now {}'.format('on' if loop else 'off')})
+@bot.command()
+async def join(ctx):
+    if ctx.author.voice:
+        channel = ctx.author.voice.channel
+        await channel.connect()
+    else:
+        await ctx.send("You are not connected to a voice channel.")
 
-# Bot commands to play and stop audio
-async def play_audio(track_url):
-    voice_channel = discord.utils.get(bot.guilds[0].voice_channels, name="On demand music")
-    if not voice_channel:
-        voice_channel = await bot.guilds[0].create_voice_channel("On demand music")
-    vc = await voice_channel.connect()
+@bot.command()
+async def leave(ctx):
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
 
-    # Use youtube-dl to get the audio URL from the Spotify preview URL
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(track_url, download=False)
-        audio_url = info['formats'][0]['url']
-    
-    source = discord.FFmpegPCMAudio(audio_url)
-    vc.play(source)
+@bot.command()
+async def play(ctx):
+    if ctx.voice_client:
+        await play_playlist(ctx.voice_client)
+    else:
+        await ctx.send("Bot is not connected to a voice channel.")
 
-async def stop_audio():
-    for vc in bot.voice_clients:
-        if vc.is_playing():
-            vc.stop()
-
-# Running Flask and Bot together
-def run_api():
-    app.run(host='0.0.0.0', port=5000)
-
-if __name__ == "__main__":
-    # Running the Flask API in a separate thread so the bot can run simultaneously
-    api_thread = threading.Thread(target=run_api)
-    api_thread.start()
-
-    # Running the bot
-    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+# Run the bot
+bot.run(os.getenv('DISCORD_BOT_TOKEN'))
