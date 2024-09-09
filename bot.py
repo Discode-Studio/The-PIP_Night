@@ -51,7 +51,9 @@ async def on_ready():
     for guild in bot.guilds:
         voice_channel = discord.utils.get(guild.voice_channels, name="On demand music")
         if voice_channel:
-            await play_playlist(voice_channel)
+            if not guild.voice_client:
+                await voice_channel.connect()
+            await play_playlist(guild.voice_client)
             break
 
 async def play_playlist(vc):
@@ -70,7 +72,10 @@ async def play_playlist(vc):
 async def join(ctx):
     if ctx.author.voice:
         channel = ctx.author.voice.channel
-        await channel.connect()
+        if ctx.voice_client:
+            await ctx.voice_client.move_to(channel)
+        else:
+            await channel.connect()
     else:
         await ctx.send("You are not connected to a voice channel.")
 
