@@ -13,7 +13,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Variables globales
-github_repo_url = 'https://api.github.com/repos/Discode-Studio/AudioSource/tree/main/music'  # Remplace par l'URL API de ton repo GitHub
+github_repo_url = 'https://api.github.com/repos/Discode-Studio/AudioSource/contents/music'  # Remplace par l'URL API de ton repo GitHub
 supported_formats = ['mp3', 'wav', 'ogg']  # Formats pris en charge
 
 # Fonction pour obtenir la liste des fichiers audio du repository GitHub
