@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
-import yt_dlp as youtube_dl  # Utilisation de yt-dlp à la place de youtube-dl
+from pytube import YouTube
+import io
 import os
 
 # Configuration du bot Discord
@@ -8,28 +9,11 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Configurations de yt-dlp pour obtenir le flux audio
-ydl_opts = {
-    'format': 'bestaudio/best',
-    'noplaylist': True,
-    'quiet': True,
-    'outtmpl': '%(id)s.%(ext)s',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
-    'postprocessor_args': [
-        '-ar', '16000'
-    ],
-    'prefer_ffmpeg': True,
-}
-
-# Fonction pour obtenir l'URL du flux audio à partir d'une URL YouTube
-def get_youtube_audio_url(url):
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return info['formats'][0]['url']
+# Fonction pour obtenir le flux audio d'une vidéo YouTube
+def get_youtube_audio_stream(url):
+    yt = YouTube(url)
+    stream = yt.streams.filter(only_audio=True).first()
+    return stream
 
 # Commande pour jouer une vidéo YouTube
 @bot.command()
@@ -39,10 +23,13 @@ async def play(ctx, url: str):
     if ctx.author.voice:
         channel = ctx.author.voice.channel
         await channel.connect()
-        audio_url = get_youtube_audio_url(url)
-        if audio_url:
+        stream = get_youtube_audio_stream(url)
+        if stream:
+            audio_file = io.BytesIO()
+            stream.stream_to_buffer(audio_file)
+            audio_file.seek(0)
             vc = ctx.voice_client
-            source = discord.FFmpegPCMAudio(audio_url)
+            source = discord.PCMVolumeTransformer(discord.File(audio_file))
             vc.play(source)
             await ctx.send(f'Playing video from {url}')
         else:
@@ -67,5 +54,5 @@ async def leave(ctx):
         await ctx.send('Disconnected from voice channel')
     else:
         await ctx.send("Bot is not connected to a voice channel.")
-# Run the bot
+
 bot.run(os.getenv('DISCORD_BOT_TOKEN'))
