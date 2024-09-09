@@ -3,8 +3,11 @@ from discord.ext import commands
 from flask import Flask, jsonify, request
 import asyncio
 import os
-import requests  # Library to make API calls
+import requests
 import threading
+from spotipy.oauth2 import SpotifyClientCredentials
+import spotipy
+import youtube_dl
 
 # Bot Discord setup
 intents = discord.Intents.default()
@@ -18,34 +21,35 @@ app = Flask(__name__)
 current_track = None
 loop = False
 
-# GitHub API endpoint for music files
-GITHUB_API_URL = "https://api.github.com/repos/Discode-Studio/AudioSource/contents/music"
+# Spotify setup
+SPOTIPY_CLIENT_ID = 'your_spotify_client_id'
+SPOTIPY_CLIENT_SECRET = 'your_spotify_client_secret'
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET))
 
 # Supported file types
 SUPPORTED_FILE_TYPES = ['.mp3', '.ogg', '.wav']
 
-# Function to get music files from GitHub repository
-def fetch_tracks_from_github():
-    response = requests.get(GITHUB_API_URL)
-    if response.status_code == 200:
-        data = response.json()
-        tracks = []
-        for item in data:
-            if any(item['name'].endswith(ext) for ext in SUPPORTED_FILE_TYPES):
-                tracks.append(item['download_url'])  # Get the direct download URL for the file
-        return tracks
-    else:
-        return []
+# Function to get music files from Spotify playlist
+def fetch_tracks_from_spotify(playlist_id):
+    playlist = sp.playlist_tracks(playlist_id)
+    tracks = []
+    for item in playlist['items']:
+        track = item['track']
+        preview_url = track['preview_url']
+        if preview_url and any(preview_url.endswith(ext) for ext in SUPPORTED_FILE_TYPES):
+            tracks.append(preview_url)
+    return tracks
 
 # Function to update available tracks
-available_tracks = fetch_tracks_from_github()
+playlist_id = 'your_spotify_playlist_id'  # Replace with your playlist ID
+available_tracks = fetch_tracks_from_spotify(playlist_id)
 
 # API route to get list of tracks
 @app.route('/tracks', methods=['GET'])
 def get_tracks():
     global available_tracks
-    # Fetch updated list from GitHub each time (or could cache for performance)
-    available_tracks = fetch_tracks_from_github()
+    # Fetch updated list from Spotify each time (or could cache for performance)
+    available_tracks = fetch_tracks_from_spotify(playlist_id)
     return jsonify({'tracks': available_tracks, 'current_track': current_track, 'loop': loop})
 
 # API route to play a track
@@ -80,8 +84,21 @@ async def play_audio(track_url):
         voice_channel = await bot.guilds[0].create_voice_channel("On demand music")
     vc = await voice_channel.connect()
 
-    # Logic to play the audio from URL (example)
-    source = discord.FFmpegPCMAudio(track_url)
+    # Use youtube-dl to get the audio URL from the Spotify preview URL
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(track_url, download=False)
+        audio_url = info['formats'][0]['url']
+    
+    source = discord.FFmpegPCMAudio(audio_url)
     vc.play(source)
 
 async def stop_audio():
