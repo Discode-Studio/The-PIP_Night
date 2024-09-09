@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import youtube_dl
+import yt_dlp as youtube_dl  # Utilisation de yt-dlp à la place de youtube-dl
 import os
 
 # Configuration du bot Discord
@@ -8,7 +8,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Configurations de youtube-dl pour obtenir le flux audio
+# Configurations de yt-dlp pour obtenir le flux audio
 ydl_opts = {
     'format': 'bestaudio/best',
     'noplaylist': True,
