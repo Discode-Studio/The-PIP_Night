@@ -3,8 +3,15 @@ from discord.ext import commands
 import yt_dlp
 import os
 
-# Configuration du bot
-bot = commands.Bot(command_prefix='!')
+# Définir les intents
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.guild_messages = True
+intents.voice_states = True
+
+# Configuration du bot avec les intents
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Fonction pour obtenir l'URL du flux audio de YouTube
 def get_youtube_audio_url(url):
