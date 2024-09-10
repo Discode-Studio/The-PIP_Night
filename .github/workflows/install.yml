@@ -45,3 +45,8 @@ jobs:
 
     - name: install ytdl Spotify
       run: pip install youtube-dl spotipy yt-dlp pytube wavelink
+
+    - name: wavelink up 
+      run: |
+        pip install --upgrade wavelink
+        pip show wavelink
