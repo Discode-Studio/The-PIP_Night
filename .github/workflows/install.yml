@@ -1,7 +1,9 @@
 name: installdp
 
 on:
-  workflow_dispatch:       # Permet de déclencher manuellement ce workflow
+  schedule:
+    - cron: "5 */6 * * *"  # Toutes les 6 heures
+  workflow_dispatch:
 
 jobs:
   build:
@@ -50,3 +52,9 @@ jobs:
       run: |
         pip install --upgrade wavelink
         pip show wavelink
+
+    - name: Run Discord Bot
+      env:
+        DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      run: |
+        python bot.py
