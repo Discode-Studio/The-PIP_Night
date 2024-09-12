@@ -1,11 +1,12 @@
 const { Client, GatewayIntentBits } = require('discord.js');
+const axios = require('axios');
 require('dotenv').config();
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent // Assurez-vous d'ajouter MessageContent si vous voulez lire le contenu des messages
+        GatewayIntentBits.MessageContent // Permet de lire le contenu des messages
     ]
 });
 
@@ -16,14 +17,12 @@ client.once('ready', () => {
 client.on('messageCreate', async message => {
     if (message.content === '!hfconditions') {
         try {
-            // Remplacez l'URL ci-dessous par l'URL de l'API de SolarHam si disponible
-            const response = await axios.get('https://api.solarham.net/your-endpoint'); // Exemple d'URL
+            // Requête pour obtenir les données de NOAA
+            const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
             const data = response.data;
-            
-            // Assurez-vous que cette partie correspond à la structure des données renvoyées par l'API
-            const kIndex = data.someDataField; // Remplacez 'someDataField' par le champ correct des données
 
-            message.channel.send(`Current K-index: ${kIndex}`);
+            // Envoie des données directement dans le canal Discord
+            message.channel.send(`Current HF conditions from NOAA:\n\`\`\`${data}\`\`\``);
         } catch (error) {
             console.error('Error fetching HF conditions:', error);
             message.channel.send('Failed to fetch HF conditions. Please try again later.');
