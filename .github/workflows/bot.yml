@@ -18,6 +18,12 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: log node.js
+      run: npm init -y
+
+    - name: installations
+      run: npm install discord.js dotenv axios
+      
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
