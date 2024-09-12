@@ -1,7 +1,13 @@
 require('dotenv').config();
 const axios = require('axios');
 const { Client, GatewayIntentBits } = require('discord.js');
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent // This is crucial for reading message content
+    ]
+});
 
 client.once('ready', () => {
     console.log('Bot is ready and connected!');
