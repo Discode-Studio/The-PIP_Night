@@ -2,7 +2,7 @@ name: UVB-76 BOT
 
 on:
   schedule:
-    - cron: "5 */6 * * *"  # Toutes les 6 heures
+    - cron: "0 */6 * * *"  # Toutes les 6 heures
   workflow_dispatch:       # Permet de déclencher manuellement ce workflow
 
 jobs:
@@ -21,5 +21,6 @@ jobs:
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
       run: |
-        python bot.py
+        JavaScript bot.js
