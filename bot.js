@@ -16,13 +16,14 @@ client.once('ready', () => {
 // Command to check HF conditions
 client.on('messageCreate', message => {
     if (message.content === '!hfconditions') {
-        axios.get('https://api.noaa.gov/space_weather_conditions') // Replace with actual NOAA API URL
+        axios.get('https://api.spaceweatherlive.com/api/spaceweather') // Exemple d'une autre API
             .then(response => {
-                const conditions = response.data; // Adjust according to the API response structure
+                const conditions = response.data; // Adapter selon la structure de la réponse
                 message.channel.send(`Current HF conditions: ${conditions.summary}`);
             })
-            .catch(error => console.error(error));
+            .catch(error => console.error('Error fetching HF conditions:', error));
     }
 });
+
 
 client.login(process.env.DISCORD_BOT_TOKEN);
