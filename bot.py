@@ -1,85 +1,102 @@
 import discord
 from discord.ext import commands
-import wavelink
+from flask import Flask, jsonify, request
+import asyncio
 import os
+import requests  # Library to make API calls
+import threading
 
-# Définir les intents
+# Bot Discord setup
 intents = discord.Intents.default()
 intents.message_content = True
-intents.guilds = True
-intents.guild_messages = True
-intents.voice_states = True
-
-# Configuration du bot avec les intents
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Fonction de démarrage du bot
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user.name}')
-    bot.loop.create_task(connect_nodes())
+# Flask setup for API
+app = Flask(__name__)
 
-# Connexion aux nodes Lavalink
-async def connect_nodes():
-    await bot.wait_until_ready()
-    node = wavelink.Node(uri='http://localhost:2333', password='youshallnotpass')
-    await wavelink.NodePool.connect(node)
+# Variables for playback
+current_track = None
+loop = False
 
-# Commande pour rejoindre un canal vocal
-@bot.command()
-async def join(ctx):
-    if ctx.author.voice:
-        voice_channel = ctx.author.voice.channel
-        vc = ctx.voice_client
-        
-        if not vc:
-            await voice_channel.connect(cls=wavelink.Player)
-            await ctx.send(f'Joined {voice_channel}!')
-        else:
-            await ctx.send("Already in a voice channel.")
+# GitHub API endpoint for music files
+GITHUB_API_URL = "https://api.github.com/repos/Discode-Studio/AudioSource/contents/music"
+
+# Supported file types
+SUPPORTED_FILE_TYPES = ['.mp3', '.ogg', '.wav']
+
+# Function to get music files from GitHub repository
+def fetch_tracks_from_github():
+    response = requests.get(GITHUB_API_URL)
+    if response.status_code == 200:
+        data = response.json()
+        tracks = []
+        for item in data:
+            if any(item['name'].endswith(ext) for ext in SUPPORTED_FILE_TYPES):
+                tracks.append(item['download_url'])  # Get the direct download URL for the file
+        return tracks
     else:
-        await ctx.send("You need to join a voice channel first.")
+        return []
 
-# Commande pour jouer une piste à partir d'un lien YouTube
-@bot.command()
-async def play(ctx, url: str):
-    vc = ctx.voice_client
-    if not vc:
-        await ctx.send("Bot is not in a voice channel. Use !join to make the bot join a channel.")
-        return
-    
-    # Charger et jouer une piste YouTube
-    track = await wavelink.YouTubeTrack.search(query=url, return_first=True)
+# Function to update available tracks
+available_tracks = fetch_tracks_from_github()
 
-    # Lancer la piste dans le canal vocal
-    await vc.play(track)
-    await ctx.send(f'Now playing: {track.title}')
+# API route to get list of tracks
+@app.route('/tracks', methods=['GET'])
+def get_tracks():
+    global available_tracks
+    # Fetch updated list from GitHub each time (or could cache for performance)
+    available_tracks = fetch_tracks_from_github()
+    return jsonify({'tracks': available_tracks, 'current_track': current_track, 'loop': loop})
 
-# Commande pour rechercher une piste YouTube
-@bot.command()
-async def search(ctx, *, query: str):
-    vc = ctx.voice_client
-    if not vc:
-        await ctx.send("Bot is not in a voice channel. Use !join to make the bot join a channel.")
-        return
-    
-    # Recherche des pistes YouTube
-    results = await wavelink.YouTubeTrack.search(query=query)
-    if results:
-        track = results[0]  # Prendre la première piste trouvée
-        await vc.play(track)
-        await ctx.send(f'Now playing: {track.title}')
-    else:
-        await ctx.send("No results found.")
+# API route to play a track
+@app.route('/play', methods=['POST'])
+def play_track():
+    global current_track
+    track = request.json.get('track')
+    if track in available_tracks:
+        current_track = track
+        # Trigger the bot to play the track
+        asyncio.run_coroutine_threadsafe(play_audio(track), bot.loop)
+        return jsonify({'message': f'Playing {track}'})
+    return jsonify({'error': 'Track not found'}), 404
 
-# Commande pour arrêter la musique
-@bot.command()
-async def stop(ctx):
-    vc = ctx.voice_client
-    if vc:
-        await vc.disconnect()
-        await ctx.send('Stopped and disconnected from the voice channel.')
-    else:
-        await ctx.send("I'm not connected to a voice channel.")
+# API route to stop playing
+@app.route('/stop', methods=['POST'])
+def stop_track():
+    asyncio.run_coroutine_threadsafe(stop_audio(), bot.loop)
+    return jsonify({'message': 'Playback stopped'})
 
-bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+# API route to toggle loop
+@app.route('/loop', methods=['POST'])
+def toggle_loop():
+    global loop
+    loop = not loop
+    return jsonify({'message': 'Looping is now {}'.format('on' if loop else 'off')})
+
+# Bot commands to play and stop audio
+async def play_audio(track_url):
+    voice_channel = discord.utils.get(bot.guilds[0].voice_channels, name="On demand music")
+    if not voice_channel:
+        voice_channel = await bot.guilds[0].create_voice_channel("On demand music")
+    vc = await voice_channel.connect()
+
+    # Logic to play the audio from URL (example)
+    source = discord.FFmpegPCMAudio(track_url)
+    vc.play(source)
+
+async def stop_audio():
+    for vc in bot.voice_clients:
+        if vc.is_playing():
+            vc.stop()
+
+# Running Flask and Bot together
+def run_api():
+    app.run(host='0.0.0.0', port=5000)
+
+if __name__ == "__main__":
+    # Running the Flask API in a separate thread so the bot can run simultaneously
+    api_thread = threading.Thread(target=run_api)
+    api_thread.start()
+
+    # Running the bot
+    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
