@@ -6,7 +6,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent // Permet de lire le contenu des messages
+        GatewayIntentBits.MessageContent // <-- intents
     ]
 });
 
