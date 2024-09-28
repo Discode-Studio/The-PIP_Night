@@ -16,11 +16,11 @@ client.once('ready', () => {
     console.log('Bot is ready and connected!');
 });
 
-// Supported languages list
+// Supported languages list (in lowercase for case-insensitive comparison)
 const supportedLanguages = [
-    "German", "French", "English", "Arabic", "Italian", "Spanish",
-    "Multi", "Tamil", "Chinese", "Mandarin", "Korean", "Hindi", 
-    "Balushi", "Urdu"
+    "german", "french", "english", "arabic", "italian", "spanish",
+    "multi", "tamil", "chinese", "mandarin", "korean", "hindi", 
+    "balushi", "urdu"
 ];
 
 // Function to parse time in HH:MM format to hour in number
@@ -32,10 +32,11 @@ function parseTimeToHour(time) {
 client.on('messageCreate', async message => {
     if (message.content.startsWith('!drm')) {
         const args = message.content.split(' ');
-        const language = args[1]; // Get the language argument from the command
+        const requestedLanguage = args[1]?.toLowerCase(); // Convert user input to lowercase for case-insensitive comparison
 
-        if (!language || !supportedLanguages.includes(language)) {
-            return message.channel.send(`There is no broadcast schedule available for "${language}".`);
+        // Check if the requested language is supported
+        if (!requestedLanguage || !supportedLanguages.includes(requestedLanguage)) {
+            return message.channel.send(`There is no broadcast schedule available for "${requestedLanguage}".`);
         }
 
         try {
@@ -59,26 +60,26 @@ client.on('messageCreate', async message => {
                 // Assuming language is in the 5th column and start time is in the first column (adjust if needed)
                 const startTime = columns[0];
                 const endTime = columns[1]; // Assuming end time is in the second column
-                const broadcastLanguage = columns[4]; // Adjust this index based on actual table structure
+                const broadcastLanguage = columns[4].toLowerCase(); // Convert table language to lowercase for comparison
 
                 // Parse the start time to numbers (hours)
                 const startHourUTC = parseTimeToHour(startTime);
                 const endHourUTC = parseTimeToHour(endTime);
 
-                // If the broadcast matches the requested language
-                if (broadcastLanguage.toLowerCase() === language.toLowerCase()) {
+                // If the broadcast matches the requested language (case insensitive)
+                if (broadcastLanguage === requestedLanguage) {
                     // Check if the broadcast is ongoing or in the future
                     if (currentHourUTC >= startHourUTC && currentHourUTC <= endHourUTC) {
-                        nextSchedule = `There is currently a broadcast in ${language}. It started at ${startTime} UTC and will end at ${endTime} UTC.`;
+                        nextSchedule = `There is currently a broadcast in ${requestedLanguage}. It started at ${startTime} UTC and will end at ${endTime} UTC.`;
                     } else if (startHourUTC > currentHourUTC && !nextSchedule) {
-                        nextSchedule = `The next broadcast in ${language} will start at ${startTime} UTC and will end at ${endTime} UTC.`;
+                        nextSchedule = `The next broadcast in ${requestedLanguage} will start at ${startTime} UTC and will end at ${endTime} UTC.`;
                     }
                 }
             });
 
             // If no schedule was found, inform the user
             if (!nextSchedule) {
-                nextSchedule = `There is no upcoming broadcast in ${language}.`;
+                nextSchedule = `There is no upcoming broadcast in ${requestedLanguage}.`;
             }
 
             // Send the result to the Discord channel
