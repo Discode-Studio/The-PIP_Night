@@ -31,16 +31,38 @@ client.on('messageCreate', async message => {
         const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
 
         if (nextSchedule) {
+            const [startHour, endHour] = nextSchedule.time.split('-').map(time => parseInt(time, 10));
+            const now = new Date();
+            const nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
+
+            // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
+            if (nextBroadcastTime < now) {
+                nextBroadcastTime.setDate(nextBroadcastTime.getDate() + 1);
+            }
+
+            const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
+
             // Formater la réponse
-            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
+            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time} ${discordTimestamp}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
         } else {
             message.channel.send(`There is no upcoming broadcast in ${args}.`);
         }
     }
 
     if (message.content === '!drmschedule') {
+        const now = new Date();
         const scheduleMessage = drmSchedule.map(broadcast => {
-            return `Time: ${broadcast.time}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
+            const [startHour, endHour] = broadcast.time.split('-').map(time => parseInt(time, 10));
+            const nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
+            
+            // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
+            if (nextBroadcastTime < now) {
+                nextBroadcastTime.setDate(nextBroadcastTime.getDate() + 1);
+            }
+
+            const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
+
+            return `Time: ${broadcast.time} ${discordTimestamp}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
         }).join('\n');
 
         if (scheduleMessage.length > 0) {
