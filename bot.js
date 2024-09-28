@@ -33,11 +33,20 @@ client.on('messageCreate', async message => {
         if (nextSchedule) {
             const [startHour, endHour] = nextSchedule.time.split('-').map(time => parseInt(time, 10));
             const now = new Date();
-            const nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
+            let nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
 
             // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
             if (nextBroadcastTime < now) {
                 nextBroadcastTime.setDate(nextBroadcastTime.getDate() + 1);
+            }
+
+            // Vérification des jours spécifiques pour "Music 4 Joy"
+            if (nextSchedule.broadcaster === "Music 4 Joy") {
+                const dayOfWeek = nextBroadcastTime.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+                if (dayOfWeek !== 2 && dayOfWeek !== 4) { // 2 = Mardi, 4 = Jeudi
+                    message.channel.send(`There is no upcoming broadcast in ${args}.`);
+                    return;
+                }
             }
 
             const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
@@ -53,17 +62,25 @@ client.on('messageCreate', async message => {
         const now = new Date();
         const scheduleMessage = drmSchedule.map(broadcast => {
             const [startHour, endHour] = broadcast.time.split('-').map(time => parseInt(time, 10));
-            const nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
+            let nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
             
             // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
             if (nextBroadcastTime < now) {
                 nextBroadcastTime.setDate(nextBroadcastTime.getDate() + 1);
             }
 
+            // Vérification des jours spécifiques pour "Music 4 Joy"
+            if (broadcast.broadcaster === "Music 4 Joy") {
+                const dayOfWeek = nextBroadcastTime.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+                if (dayOfWeek !== 2 && dayOfWeek !== 4) {
+                    return null; // Pas de diffusion ce jour-là
+                }
+            }
+
             const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
 
             return `Time: ${broadcast.time} ${discordTimestamp}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
-        }).join('\n');
+        }).filter(Boolean).join('\n');
 
         if (scheduleMessage.length > 0) {
             message.channel.send(`Broadcast Schedule:\n${scheduleMessage}`);
