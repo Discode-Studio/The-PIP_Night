@@ -1,10 +1,20 @@
+// Discord bot with NOAA API made by Discode Studio.
 const { Client, GatewayIntentBits } = require('discord.js');
+const axios = require('axios');
+require('dotenv').config();
+
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent // intents
+    ]
+});
 
 client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
+    console.log('Bot is ready and connected!');
 });
 
 client.on('messageCreate', async message => {
@@ -39,6 +49,20 @@ client.on('messageCreate', async message => {
             message.channel.send(`There is no broadcast schedule available.`);
         }
     }
+
+    if (message.content === '!hfconditions') {
+        try {
+            // NOAA API
+            const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
+            const data = response.data;
+
+            // Discord chat
+            message.channel.send(`Current HF conditions from NOAA:\n\`\`\`${data}\`\`\``);
+        } catch (error) {
+            console.error('Error fetching HF conditions:', error);
+            message.channel.send('Failed to fetch HF conditions. Please try again later.');
+        }
+    }
 });
 
-client.login('YOUR_BOT_TOKEN'); // Remplacez 'YOUR_BOT_TOKEN' par votre token de bot
+client.login(process.env.DISCORD_BOT_TOKEN); // Assurez-vous que votre token est dans le fichier .env
