@@ -1,8 +1,7 @@
 // Discord bot with NOAA API and DRM schedule fetch made by Discode Studio.
 const { Client, GatewayIntentBits } = require('discord.js');
-const axios = require('axios');
-const cheerio = require('cheerio');
 require('dotenv').config();
+const scheduleData = require('./drm_schedule.json'); // Assuming you save the JSON in drm_schedule.json
 
 const client = new Client({
     intents: [
@@ -23,10 +22,13 @@ const supportedLanguages = [
     "balushi", "urdu"
 ];
 
-// Function to parse time in HH:MM format to hour in number
-function parseTimeToHour(time) {
-    const [hour, minute] = time.split(':').map(Number);
-    return hour + minute / 60; // Convert minutes to a fraction of an hour
+// Function to convert time ranges (e.g., "0500-0600") to numerical hours
+function parseTimeRangeToHours(timeRange) {
+    const [start, end] = timeRange.split('-').map(time => {
+        const [hour, minute] = time.match(/.{1,2}/g).map(Number);
+        return hour + minute / 60;
+    });
+    return { start, end };
 }
 
 client.on('messageCreate', async message => {
@@ -39,56 +41,35 @@ client.on('messageCreate', async message => {
             return message.channel.send(`There is no broadcast schedule available for "${requestedLanguage}".`);
         }
 
-        try {
-            // Fetch the DRM broadcast schedule page
-            const response = await axios.get('https://www.drm.org/broadcast-schedule/');
-            const html = response.data;
+        // Get the current time in UTC
+        const nowUTC = new Date();
+        const currentHourUTC = nowUTC.getUTCHours() + nowUTC.getUTCMinutes() / 60;
 
-            // Load the HTML using cheerio
-            const $ = cheerio.load(html);
+        let nextSchedule = '';
+        let foundCurrent = false;
 
-            // Get the current time in UTC
-            const nowUTC = new Date();
-            const currentHourUTC = nowUTC.getUTCHours();
-
-            let nextSchedule = '';
-
-            // Extract data from the table with id "table1" and search for the requested language
-            $('#table1 tbody tr').each((i, element) => {
-                const columns = $(element).children('td').map((i, el) => $(el).text().trim()).get();
-
-                // Assuming language is in the 5th column and start time is in the first column (adjust if needed)
-                const startTime = columns[0];
-                const endTime = columns[1]; // Assuming end time is in the second column
-                const broadcastLanguage = columns[4].toLowerCase(); // Convert table language to lowercase for comparison
-
-                // Parse the start time to numbers (hours)
-                const startHourUTC = parseTimeToHour(startTime);
-                const endHourUTC = parseTimeToHour(endTime);
-
-                // If the broadcast matches the requested language (case insensitive)
-                if (broadcastLanguage === requestedLanguage) {
-                    // Check if the broadcast is ongoing or in the future
-                    if (currentHourUTC >= startHourUTC && currentHourUTC <= endHourUTC) {
-                        nextSchedule = `There is currently a broadcast in ${requestedLanguage}. It started at ${startTime} UTC and will end at ${endTime} UTC.`;
-                    } else if (startHourUTC > currentHourUTC && !nextSchedule) {
-                        nextSchedule = `The next broadcast in ${requestedLanguage} will start at ${startTime} UTC and will end at ${endTime} UTC.`;
-                    }
+        // Find the next or ongoing schedule for the requested language
+        for (const schedule of scheduleData) {
+            const { start, end } = parseTimeRangeToHours(schedule.time);
+            if (schedule.language.toLowerCase() === requestedLanguage) {
+                if (currentHourUTC >= start && currentHourUTC <= end) {
+                    nextSchedule = `There is currently a broadcast in ${requestedLanguage}. It started at ${schedule.time} UTC and is broadcasting on ${schedule.frequency} kHz.`;
+                    foundCurrent = true;
+                    break;
+                } else if (start > currentHourUTC && !foundCurrent) {
+                    nextSchedule = `The next broadcast in ${requestedLanguage} will start at ${schedule.time} UTC on ${schedule.frequency} kHz.`;
+                    foundCurrent = true;
+                    break;
                 }
-            });
-
-            // If no schedule was found, inform the user
-            if (!nextSchedule) {
-                nextSchedule = `There is no upcoming broadcast in ${requestedLanguage}.`;
             }
-
-            // Send the result to the Discord channel
-            message.channel.send(nextSchedule);
-
-        } catch (error) {
-            console.error('Error fetching DRM schedule:', error);
-            message.channel.send('Failed to fetch DRM schedule. Please try again later.');
         }
+
+        if (!nextSchedule) {
+            nextSchedule = `There is no upcoming broadcast in ${requestedLanguage}.`;
+        }
+
+        // Send the result to the Discord channel
+        message.channel.send(nextSchedule);
     }
 });
 
