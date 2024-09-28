@@ -31,7 +31,7 @@ client.on('messageCreate', async message => {
         const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
 
         if (nextSchedule) {
-            const [startHour, endHour] = nextSchedule.time.split('-').map(time => parseInt(time, 10));
+            const [startHour] = nextSchedule.time.split('-').map(time => parseInt(time, 10));
             const now = new Date();
             let nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
 
@@ -61,7 +61,7 @@ client.on('messageCreate', async message => {
     if (message.content === '!drmschedule') {
         const now = new Date();
         const scheduleMessage = drmSchedule.map(broadcast => {
-            const [startHour, endHour] = broadcast.time.split('-').map(time => parseInt(time, 10));
+            const [startHour] = broadcast.time.split('-').map(time => parseInt(time, 10));
             let nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
             
             // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
