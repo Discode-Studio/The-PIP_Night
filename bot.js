@@ -40,18 +40,43 @@ client.on('messageCreate', async message => {
             // Load the HTML using cheerio
             const $ = cheerio.load(html);
 
-            // Extract data from the table with id "table1"
+            // Get the current time in UTC
+            const nowUTC = new Date();
+            const currentHourUTC = nowUTC.getUTCHours();
+
+            // Function to parse time in HH:MM format to hour in number
+            function parseTimeToHour(time) {
+                const [hour, minute] = time.split(':').map(Number);
+                return hour + minute / 60; // Convert minutes to a fraction of an hour
+            }
+
+            // Extract data from the table with id "table1" and filter based on the current time
             let scheduleData = '';
             $('#table1 tbody tr').each((i, element) => {
-                const row = $(element).children('td').map((i, el) => $(el).text().trim()).get();
-                scheduleData += row.join(' | ') + '\n';
+                const columns = $(element).children('td').map((i, el) => $(el).text().trim()).get();
+
+                // Assuming the time is in the first column (adjust if needed)
+                const startTime = columns[0];
+                const endTime = columns[1]; // Assuming end time is the second column (adjust if needed)
+
+                // Parse the start and end times to numbers (hours)
+                const startHourUTC = parseTimeToHour(startTime);
+                const endHourUTC = parseTimeToHour(endTime);
+
+                // Check if the broadcast is within the next 2 hours or currently airing
+                if (
+                    (currentHourUTC >= startHourUTC && currentHourUTC <= endHourUTC) || // Currently airing
+                    (startHourUTC > currentHourUTC && startHourUTC <= currentHourUTC + 2) // Starts in the next 2 hours
+                ) {
+                    scheduleData += columns.join(' | ') + '\n'; // Format row data
+                }
             });
 
             if (scheduleData) {
-                // Send the extracted schedule in the Discord chat
-                message.channel.send(`DRM Broadcast Schedule:\n\`\`\`${scheduleData}\`\`\``);
+                // Send the filtered schedule in the Discord chat
+                message.channel.send(`DRM Broadcast Schedule (next 2 hours):\n\`\`\`${scheduleData}\`\`\``);
             } else {
-                message.channel.send('Failed to fetch DRM schedule. No data found.');
+                message.channel.send('No broadcasts found within the next 2 hours.');
             }
         } catch (error) {
             console.error('Error fetching DRM schedule:', error);
