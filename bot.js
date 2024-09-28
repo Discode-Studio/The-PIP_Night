@@ -1,76 +1,44 @@
-// Discord bot with NOAA API and DRM schedule fetch made by Discode Studio.
 const { Client, GatewayIntentBits } = require('discord.js');
-require('dotenv').config();
-const scheduleData = require('./drm_schedule.json'); // Assuming you save the JSON in drm_schedule.json
+const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent // intents
-    ]
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
 client.once('ready', () => {
-    console.log('Bot is ready and connected!');
+    console.log(`Logged in as ${client.user.tag}`);
 });
 
-// Supported languages list (in lowercase for case-insensitive comparison)
-const supportedLanguages = [
-    "german", "french", "english", "arabic", "italian", "spanish",
-    "multi", "tamil", "chinese", "mandarin", "korean", "hindi", 
-    "balushi", "urdu"
-];
-
-// Function to convert time ranges (e.g., "0500-0600") to numerical hours
-function parseTimeRangeToHours(timeRange) {
-    const [start, end] = timeRange.split('-').map(time => {
-        const [hour, minute] = time.match(/.{1,2}/g).map(Number);
-        return hour + minute / 60;
-    });
-    return { start, end };
-}
-
 client.on('messageCreate', async message => {
-    if (message.content.startsWith('!drm')) {
-        const args = message.content.split(' ');
-        const requestedLanguage = args[1]?.toLowerCase(); // Convert user input to lowercase for case-insensitive comparison
-
-        // Check if the requested language is supported
-        if (!requestedLanguage || !supportedLanguages.includes(requestedLanguage)) {
-            return message.channel.send(`There is no broadcast schedule available for "${requestedLanguage}".`);
+    if (message.content.startsWith('!drm ')) {
+        const args = message.content.slice(5).trim().toLowerCase(); // Mettre en minuscule
+        const supportedLanguages = ["german", "french", "english", "arabic", "italian", "spanish", "multi", "tamil", "chinese", "mandarin", "korean", "hindi", "balushi", "urdu"];
+        
+        if (!supportedLanguages.includes(args)) {
+            message.channel.send(`There is no broadcast schedule available for "${args}".`);
+            return;
         }
 
-        // Get the current time in UTC
-        const nowUTC = new Date();
-        const currentHourUTC = nowUTC.getUTCHours() + nowUTC.getUTCMinutes() / 60;
+        // Chercher l'entrée correspondante dans le fichier JSON
+        const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
 
-        let nextSchedule = '';
-        let foundCurrent = false;
-
-        // Find the next or ongoing schedule for the requested language
-        for (const schedule of scheduleData) {
-            const { start, end } = parseTimeRangeToHours(schedule.time);
-            if (schedule.language.toLowerCase() === requestedLanguage) {
-                if (currentHourUTC >= start && currentHourUTC <= end) {
-                    nextSchedule = `There is currently a broadcast in ${requestedLanguage}. It started at ${schedule.time} UTC and is broadcasting on ${schedule.frequency} kHz.`;
-                    foundCurrent = true;
-                    break;
-                } else if (start > currentHourUTC && !foundCurrent) {
-                    nextSchedule = `The next broadcast in ${requestedLanguage} will start at ${schedule.time} UTC on ${schedule.frequency} kHz.`;
-                    foundCurrent = true;
-                    break;
-                }
-            }
+        if (nextSchedule) {
+            // Formater la réponse
+            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
+        } else {
+            message.channel.send(`There is no upcoming broadcast in ${args}.`);
         }
+    }
 
-        if (!nextSchedule) {
-            nextSchedule = `There is no upcoming broadcast in ${requestedLanguage}.`;
+    if (message.content === '!drmschedule') {
+        const scheduleMessage = drmSchedule.map(broadcast => {
+            return `Time: ${broadcast.time}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
+        }).join('\n');
+
+        if (scheduleMessage.length > 0) {
+            message.channel.send(`Broadcast Schedule:\n${scheduleMessage}`);
+        } else {
+            message.channel.send(`There is no broadcast schedule available.`);
         }
-
-        // Send the result to the Discord channel
-        message.channel.send(nextSchedule);
     }
 });
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+client.login('YOUR_BOT_TOKEN'); // Remplacez 'YOUR_BOT_TOKEN' par votre token de bot
