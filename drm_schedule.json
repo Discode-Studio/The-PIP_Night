@@ -1,0 +1,124 @@
+[
+  {
+    "time": "0000-2400",
+    "broadcaster": "Funklust",
+    "frequency": "15785",
+    "days": "Daily",
+    "language": "German",
+    "target": "Nuremberg area",
+    "site": "Erlangen, Germany",
+    "power_kW": "0.2",
+    "beam_degrees": "Non Directional"
+  },
+  {
+    "time": "0500-0600",
+    "broadcaster": "BBC World Service",
+    "frequency": "5875 or 3955",
+    "days": "Daily",
+    "language": "English",
+    "target": "NW Europe",
+    "site": "Woofferton, UK",
+    "power_kW": "100",
+    "beam_degrees": "78"
+  },
+  {
+    "time": "1900-2000",
+    "broadcaster": "TDF",
+    "frequency": "9815",
+    "days": "Daily",
+    "language": "French",
+    "target": "Europe",
+    "site": "Issoudain, France",
+    "power_kW": "100",
+    "beam_degrees": "280"
+  },
+  {
+    "time": "0945-1325",
+    "broadcaster": "Radio Kuwait",
+    "frequency": "15110",
+    "days": "Daily",
+    "language": "Arabic",
+    "target": "Europe",
+    "site": "Kuwait, Kabd",
+    "power_kW": "50",
+    "beam_degrees": "310"
+  },
+  {
+    "time": "1600-1700",
+    "broadcaster": "Radio Romania International",
+    "frequency": "11975",
+    "days": "Daily",
+    "language": "French",
+    "target": "Europe",
+    "site": "Romania, Tiganesti",
+    "power_kW": "100",
+    "beam_degrees": "232"
+  },
+  {
+    "time": "1700-1800",
+    "broadcaster": "Radio Romania International",
+    "frequency": "13750",
+    "days": "Daily",
+    "language": "English",
+    "target": "Europe",
+    "site": "Romania, Tiganesti",
+    "power_kW": "90",
+    "beam_degrees": "307"
+  },
+  {
+    "time": "1800-1830",
+    "broadcaster": "Radio Romania International",
+    "frequency": "5910",
+    "days": "Daily",
+    "language": "Italian",
+    "target": "Europe",
+    "site": "Romania, Saftica",
+    "power_kW": "90",
+    "beam_degrees": "270"
+  },
+  {
+    "time": "1800-1900",
+    "broadcaster": "Radio Romania International",
+    "frequency": "9570",
+    "days": "Daily",
+    "language": "German",
+    "target": "Europe",
+    "site": "Romania, Tiganesti",
+    "power_kW": "90",
+    "beam_degrees": "307"
+  },
+  {
+    "time": "2100-2200",
+    "broadcaster": "Radio Romania International",
+    "frequency": "15170",
+    "days": "Daily",
+    "language": "Spanish",
+    "target": "Spain + S. America",
+    "site": "Romania, Tiganesti",
+    "power_kW": "90",
+    "beam_degrees": "247"
+  },
+  {
+    "time": "1800-1900",
+    "broadcaster": "Music 4 Joy",
+    "frequency": "13730",
+    "days": "Tue and Thu",
+    "language": "Multi",
+    "target": "East Africa",
+    "site": "Germany, Nauen",
+    "power_kW": "100",
+    "beam_degrees": "135"
+  },
+  {
+    "time": "2000-2100",
+    "broadcaster": "Music 4 Joy",
+    "frequency": "11615",
+    "days": "Tue and Thu",
+    "language": "Multi",
+    "target": "West Africa",
+    "site": "Germany, Nauen",
+    "power_kW": "100",
+    "beam_degrees": "213"
+  }
+  // Remaining data truncated for brevity
+]
