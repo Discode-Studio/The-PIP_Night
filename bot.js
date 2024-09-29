@@ -46,6 +46,20 @@ function getNextBroadcastTime(schedule) {
     return broadcastDate;
 }
 
+// Fonction pour calculer le temps restant avant le broadcast
+function formatTimeDifference(broadcastDate) {
+    const now = new Date();
+    const timeDiff = broadcastDate - now; // Différence en millisecondes
+
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+    const isToday = broadcastDate.getDate() === now.getDate();
+    const dayLabel = isToday ? 'today' : 'tomorrow';
+
+    return `: ${dayLabel} at ${broadcastDate.getUTCHours().toString().padStart(2, '0')}:${broadcastDate.getUTCMinutes().toString().padStart(2, '0')}, in ${hours}h${minutes.toString().padStart(2, '0')}m`;
+}
+
 client.on('messageCreate', async message => {
     if (message.content.startsWith('!drm ')) {
         const args = message.content.slice(5).trim().toLowerCase(); // Mettre en minuscule
@@ -61,11 +75,10 @@ client.on('messageCreate', async message => {
 
         if (nextSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextSchedule); // Utiliser la fonction pour ajuster la date
-
-            const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
+            const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
 
             // Formater la réponse
-            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time} ${discordTimestamp}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
+            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time} (UTC/GMT)${formattedTime}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
         } else {
             message.channel.send(`There is no upcoming broadcast in ${args}.`);
         }
@@ -74,9 +87,9 @@ client.on('messageCreate', async message => {
     if (message.content === '!drmschedule') {
         const scheduleMessage = drmSchedule.map(broadcast => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast); // Utiliser la fonction pour ajuster la date
-            const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
+            const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
 
-            return `Time: ${broadcast.time} ${discordTimestamp}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
+            return `Time: ${broadcast.time} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
         }).filter(Boolean).join('\n');
 
         if (scheduleMessage.length > 0) {
