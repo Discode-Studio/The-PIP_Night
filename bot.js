@@ -17,29 +17,36 @@ client.once('ready', () => {
     console.log('Bot is ready and connected!');
 });
 
+// Fonction pour convertir l'heure en format "hhmm" en un format correct avec heures et minutes
+function convertTimeToUTC(time) {
+    const hours = time.slice(0, 2); // Extraire les deux premiers caractères pour les heures
+    const minutes = time.slice(2); // Extraire les deux derniers caractères pour les minutes
+    return { hours: parseInt(hours, 10), minutes: parseInt(minutes, 10) }; // Retourner un objet contenant heures et minutes
+}
+
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
     const now = new Date();
-    const [startHour] = schedule.time.split('-').map(time => parseInt(time, 10)); // Récupérer l'heure de début
+    const [startTime] = schedule.time.split('-').map(time => convertTimeToUTC(time)); // Convertir "hhmm" en heures et minutes
     let broadcastDate = new Date(now); // Partir de la date actuelle
 
     // Ajuster la date avec l'heure de début du programme
-    broadcastDate.setHours(startHour);
-    broadcastDate.setMinutes(0, 0, 0); // Minutes et secondes à 0
+    broadcastDate.setUTCHours(startTime.hours);
+    broadcastDate.setUTCMinutes(startTime.minutes, 0, 0); // Minutes et secondes à 0
 
     // Si l'heure de diffusion est déjà passée aujourd'hui, on passe au lendemain
     if (broadcastDate < now) {
-        broadcastDate.setDate(broadcastDate.getDate() + 1);
+        broadcastDate.setUTCDate(broadcastDate.getUTCDate() + 1);
     }
 
     // Gestion spéciale pour "Music 4 Joy", qui ne diffuse que les mardi et jeudi
     if (schedule.broadcaster === "Music 4 Joy") {
-        const dayOfWeek = broadcastDate.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+        const dayOfWeek = broadcastDate.getUTCDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
 
         // Si aujourd'hui n'est ni mardi ni jeudi, passer au prochain mardi ou jeudi
         if (dayOfWeek !== 2 && dayOfWeek !== 4) {
-            const daysUntilNextBroadcast = dayOfWeek < 2 ? 2 - dayOfWeek : 4 - dayOfWeek;
-            broadcastDate.setDate(broadcastDate.getDate() + daysUntilNextBroadcast);
+            const daysUntilNextBroadcast = (dayOfWeek < 2) ? 2 - dayOfWeek : 4 - dayOfWeek;
+            broadcastDate.setUTCDate(broadcastDate.getUTCDate() + daysUntilNextBroadcast);
         }
     }
 
@@ -54,7 +61,7 @@ function formatTimeDifference(broadcastDate) {
     const hours = Math.floor(timeDiff / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
-    const isToday = broadcastDate.getDate() === now.getDate();
+    const isToday = broadcastDate.getUTCDate() === now.getUTCDate();
     const dayLabel = isToday ? 'today' : 'tomorrow';
 
     return `: ${dayLabel} at ${broadcastDate.getUTCHours().toString().padStart(2, '0')}:${broadcastDate.getUTCMinutes().toString().padStart(2, '0')}, in ${hours}h${minutes.toString().padStart(2, '0')}m`;
