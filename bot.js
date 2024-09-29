@@ -21,13 +21,13 @@ client.once('ready', () => {
 function getNextBroadcastTime(schedule) {
     const now = new Date();
     const [startHour] = schedule.time.split('-').map(time => parseInt(time, 10)); // Récupérer l'heure de début
-    let broadcastDate = new Date();
+    let broadcastDate = new Date(now); // Partir de la date actuelle
 
-    // Réinitialiser l'heure à celle du programme (startHour) pour le jour actuel
+    // Ajuster la date avec l'heure de début du programme
     broadcastDate.setHours(startHour);
     broadcastDate.setMinutes(0, 0, 0); // Minutes et secondes à 0
 
-    // Si l'heure de diffusion est déjà passée aujourd'hui, ajoutez un jour
+    // Si l'heure de diffusion est déjà passée aujourd'hui, on passe au lendemain
     if (broadcastDate < now) {
         broadcastDate.setDate(broadcastDate.getDate() + 1);
     }
