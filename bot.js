@@ -113,18 +113,11 @@ client.on('messageCreate', async message => {
     }
 
     // Commandes pour BBC
-    if (message.content.startsWith('!bbc ')) {
-        const args = message.content.slice(5).trim().toLowerCase();
-        
-        // Vous pouvez adapter le tableau des langues selon vos besoins
-        const supportedLanguagesBBC = ["english", "french", "spanish", "arabic", "mandarin"];
-        
-        if (!supportedLanguagesBBC.includes(args)) {
-            message.channel.send(`There is no broadcast schedule available for "${args}".`);
-            return;
-        }
-
-        const nextBBCSchedule = bbcSchedule.find(broadcast => broadcast.Language.toLowerCase() === args);
+    if (message.content === '!bbc') {
+        const nextBBCSchedule = bbcSchedule.find(broadcast => {
+            const nextBroadcastTime = getNextBroadcastTime(broadcast);
+            return nextBroadcastTime > new Date(); // Filtre les horaires futurs
+        });
 
         if (nextBBCSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextBBCSchedule);
@@ -132,7 +125,7 @@ client.on('messageCreate', async message => {
 
             const embed = new EmbedBuilder()
                 .setColor(0x1E90FF)
-                .setTitle(`Next BBC broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
+                .setTitle(`Next BBC broadcast`)
                 .addFields(
                     { name: 'Time (UTC/GMT)', value: `${nextBBCSchedule.Start}-${nextBBCSchedule.End}${formattedTime}`, inline: true },
                     { name: 'Broadcaster', value: nextBBCSchedule.Station, inline: true },
@@ -143,7 +136,7 @@ client.on('messageCreate', async message => {
 
             message.channel.send({ embeds: [embed] });
         } else {
-            message.channel.send(`There is no upcoming BBC broadcast in ${args}.`);
+            message.channel.send(`There is no upcoming BBC broadcast.`);
         }
     }
 
