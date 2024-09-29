@@ -9,7 +9,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent // intents
+        GatewayIntentBits.MessageContent
     ]
 });
 
@@ -19,27 +19,31 @@ client.once('ready', () => {
 
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
-    const [startHour] = schedule.time.split('-').map(time => parseInt(time, 10)); // Récupérer l'heure de début
     const now = new Date();
-    let nextBroadcastTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
+    const [startHour] = schedule.time.split('-').map(time => parseInt(time, 10)); // Récupérer l'heure de début
+    let broadcastDate = new Date();
 
-    // Si l'heure de diffusion est déjà passée pour aujourd'hui, ajoutez un jour
-    if (nextBroadcastTime < now) {
-        nextBroadcastTime.setDate(nextBroadcastTime.getDate() + 1);
+    // Réinitialiser l'heure à celle du programme (startHour) pour le jour actuel
+    broadcastDate.setHours(startHour);
+    broadcastDate.setMinutes(0, 0, 0); // Minutes et secondes à 0
+
+    // Si l'heure de diffusion est déjà passée aujourd'hui, ajoutez un jour
+    if (broadcastDate < now) {
+        broadcastDate.setDate(broadcastDate.getDate() + 1);
     }
 
     // Gestion spéciale pour "Music 4 Joy", qui ne diffuse que les mardi et jeudi
     if (schedule.broadcaster === "Music 4 Joy") {
-        const dayOfWeek = nextBroadcastTime.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+        const dayOfWeek = broadcastDate.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
 
-        // Si ce n'est pas mardi (2) ou jeudi (4), trouver le prochain mardi ou jeudi
+        // Trouver le prochain mardi (2) ou jeudi (4)
         if (dayOfWeek !== 2 && dayOfWeek !== 4) {
             const daysUntilNextBroadcast = dayOfWeek < 2 ? 2 - dayOfWeek : 4 - dayOfWeek;
-            nextBroadcastTime.setDate(nextBroadcastTime.getDate() + daysUntilNextBroadcast);
+            broadcastDate.setDate(broadcastDate.getDate() + daysUntilNextBroadcast);
         }
     }
 
-    return nextBroadcastTime;
+    return broadcastDate;
 }
 
 client.on('messageCreate', async message => {
@@ -68,7 +72,6 @@ client.on('messageCreate', async message => {
     }
 
     if (message.content === '!drmschedule') {
-        const now = new Date();
         const scheduleMessage = drmSchedule.map(broadcast => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast); // Utiliser la fonction pour ajuster la date
             const discordTimestamp = `<t:${Math.floor(nextBroadcastTime.getTime() / 1000)}:R>`; // Format timestamp Discord
