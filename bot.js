@@ -36,7 +36,7 @@ function getNextBroadcastTime(schedule) {
     if (schedule.broadcaster === "Music 4 Joy") {
         const dayOfWeek = broadcastDate.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
 
-        // Trouver le prochain mardi (2) ou jeudi (4)
+        // Si aujourd'hui n'est ni mardi ni jeudi, passer au prochain mardi ou jeudi
         if (dayOfWeek !== 2 && dayOfWeek !== 4) {
             const daysUntilNextBroadcast = dayOfWeek < 2 ? 2 - dayOfWeek : 4 - dayOfWeek;
             broadcastDate.setDate(broadcastDate.getDate() + daysUntilNextBroadcast);
