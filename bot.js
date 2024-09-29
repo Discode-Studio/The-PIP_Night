@@ -4,7 +4,14 @@ const axios = require('axios');
 require('dotenv').config();
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
-const bbcSchedule = require('./bbc.json'); // Chargez le fichier bbc.json
+let bbcSchedule;
+
+try {
+    bbcSchedule = require('./bbc.json'); // Chargez le fichier bbc.json
+} catch (error) {
+    console.error('Error loading bbc.json:', error);
+    bbcSchedule = []; // Assurez-vous que bbcSchedule est un tableau vide en cas d'erreur
+}
 
 const client = new Client({
     intents: [
@@ -24,7 +31,7 @@ function convertTimeToUTC(time) {
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
     const now = new Date();
-    const [startTime] = schedule.time.split('-').map(time => convertTimeToUTC(time));
+    const [startTime] = schedule.Start.split('-').map(time => convertTimeToUTC(time));
     let broadcastDate = new Date(now);
 
     broadcastDate.setUTCHours(startTime.hours);
@@ -117,7 +124,7 @@ client.on('messageCreate', async message => {
             return;
         }
 
-        const nextBBCSchedule = bbcSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
+        const nextBBCSchedule = bbcSchedule.find(broadcast => broadcast.Language.toLowerCase() === args);
 
         if (nextBBCSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextBBCSchedule);
@@ -127,10 +134,10 @@ client.on('messageCreate', async message => {
                 .setColor(0x1E90FF)
                 .setTitle(`Next BBC broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
                 .addFields(
-                    { name: 'Time (UTC/GMT)', value: `${nextBBCSchedule.time}${formattedTime}`, inline: true },
-                    { name: 'Broadcaster', value: nextBBCSchedule.broadcaster, inline: true },
-                    { name: 'Frequency', value: nextBBCSchedule.frequency, inline: true },
-                    { name: 'Target', value: nextBBCSchedule.target, inline: true }
+                    { name: 'Time (UTC/GMT)', value: `${nextBBCSchedule.Start}-${nextBBCSchedule.End}${formattedTime}`, inline: true },
+                    { name: 'Broadcaster', value: nextBBCSchedule.Station, inline: true },
+                    { name: 'Frequency', value: nextBBCSchedule.Freq, inline: true },
+                    { name: 'Target', value: nextBBCSchedule.Transmitter_Site, inline: true }
                 )
                 .setTimestamp();
 
@@ -145,7 +152,7 @@ client.on('messageCreate', async message => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast);
             const formattedTime = formatTimeDifference(nextBroadcastTime);
 
-            return `Time: ${broadcast.time} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
+            return `Time: ${broadcast.Start}-${broadcast.End} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.Station}, Frequency: ${broadcast.Freq}, Language: ${broadcast.Language}`;
         }).filter(Boolean).join('\n');
 
         if (scheduleMessage.length > 0) {
