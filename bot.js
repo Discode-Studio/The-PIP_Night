@@ -1,5 +1,5 @@
 // Discord bot with NOAA API made by Discode Studio.
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -11,10 +11,6 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
-});
-
-client.once('ready', () => {
-    console.log('Bot is ready and connected!');
 });
 
 // Fonction pour convertir l'heure en format "hhmm" en un format correct avec heures et minutes
@@ -84,8 +80,19 @@ client.on('messageCreate', async message => {
             const nextBroadcastTime = getNextBroadcastTime(nextSchedule); // Utiliser la fonction pour ajuster la date
             const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
 
-            // Formater la réponse
-            message.channel.send(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}:\nTime: ${nextSchedule.time} (UTC/GMT)${formattedTime}\nBroadcaster: ${nextSchedule.broadcaster}\nFrequency: ${nextSchedule.frequency}\nTarget: ${nextSchedule.target}`);
+            // Création de l'embed
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF) // Bleu
+                .setTitle(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
+                .addFields(
+                    { name: 'Time (UTC/GMT)', value: `${nextSchedule.time}${formattedTime}`, inline: true },
+                    { name: 'Broadcaster', value: nextSchedule.broadcaster, inline: true },
+                    { name: 'Frequency', value: nextSchedule.frequency, inline: true },
+                    { name: 'Target', value: nextSchedule.target, inline: true }
+                )
+                .setTimestamp(); // Ajoute un timestamp de génération
+
+            message.channel.send({ embeds: [embed] });
         } else {
             message.channel.send(`There is no upcoming broadcast in ${args}.`);
         }
@@ -100,7 +107,13 @@ client.on('messageCreate', async message => {
         }).filter(Boolean).join('\n');
 
         if (scheduleMessage.length > 0) {
-            message.channel.send(`Broadcast Schedule:\n${scheduleMessage}`);
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF) // Bleu
+                .setTitle('Broadcast Schedule')
+                .setDescription(scheduleMessage)
+                .setTimestamp(); // Ajoute un timestamp
+
+            message.channel.send({ embeds: [embed] });
         } else {
             message.channel.send(`There is no broadcast schedule available.`);
         }
@@ -112,8 +125,14 @@ client.on('messageCreate', async message => {
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
             const data = response.data;
 
-            // Discord chat
-            message.channel.send(`Current HF conditions from NOAA:\n\`\`\`${data}\`\`\``);
+            // Création de l'embed pour les conditions HF
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF) // Bleu
+                .setTitle('Current HF conditions from NOAA')
+                .setDescription(`\`\`\`${data}\`\`\``)
+                .setTimestamp(); // Ajoute un timestamp
+
+            message.channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error fetching HF conditions:', error);
             message.channel.send('Failed to fetch HF conditions. Please try again later.');
