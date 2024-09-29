@@ -31,17 +31,24 @@ function convertTimeToUTC(time) {
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
     const now = new Date();
-    const [startTime] = schedule.Start.split('-').map(time => convertTimeToUTC(time));
-    let broadcastDate = new Date(now);
+    let nextBroadcast = null;
 
-    broadcastDate.setUTCHours(startTime.hours);
-    broadcastDate.setUTCMinutes(startTime.minutes, 0, 0);
+    // Parcourir les horaires de diffusion pour trouver le prochain
+    for (const entry of schedule) {
+        const [startTime] = entry.Start.split('-').map(time => convertTimeToUTC(time));
+        let broadcastDate = new Date(now);
 
-    if (broadcastDate < now) {
-        broadcastDate.setUTCDate(broadcastDate.getUTCDate() + 1);
+        broadcastDate.setUTCHours(startTime.hours);
+        broadcastDate.setUTCMinutes(startTime.minutes, 0, 0);
+
+        // Si le prochain horaire est dans le futur
+        if (broadcastDate >= now) {
+            nextBroadcast = entry;
+            break;
+        }
     }
 
-    return broadcastDate;
+    return nextBroadcast;
 }
 
 // Fonction pour calculer le temps restant avant le broadcast
@@ -59,6 +66,7 @@ function formatTimeDifference(broadcastDate) {
 }
 
 client.on('messageCreate', async message => {
+    // Commande pour DRM
     if (message.content.startsWith('!drm ')) {
         const args = message.content.slice(5).trim().toLowerCase();
         const supportedLanguages = ["german", "french", "english", "arabic", "italian", "spanish", "multi", "tamil", "chinese", "mandarin", "korean", "hindi", "balushi", "urdu"];
@@ -69,7 +77,6 @@ client.on('messageCreate', async message => {
         }
 
         const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
-
         if (nextSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextSchedule);
             const formattedTime = formatTimeDifference(nextBroadcastTime);
@@ -91,6 +98,7 @@ client.on('messageCreate', async message => {
         }
     }
 
+    // Commande pour DRM Schedule
     if (message.content === '!drmschedule') {
         const scheduleMessage = drmSchedule.map(broadcast => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast);
@@ -112,12 +120,9 @@ client.on('messageCreate', async message => {
         }
     }
 
-    // Commandes pour BBC
-    if (message.content === '!bbc') {
-        const nextBBCSchedule = bbcSchedule.find(broadcast => {
-            const nextBroadcastTime = getNextBroadcastTime(broadcast);
-            return nextBroadcastTime > new Date(); // Filtre les horaires futurs
-        });
+    // Commande pour BBC
+    if (message.content.startsWith('!bbc')) {
+        const nextBBCSchedule = getNextBroadcastTime(bbcSchedule); // Obtenez le prochain horaire
 
         if (nextBBCSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextBBCSchedule);
@@ -140,6 +145,7 @@ client.on('messageCreate', async message => {
         }
     }
 
+    // Commande pour BBC Schedule
     if (message.content === '!bbcschedule') {
         const scheduleMessage = bbcSchedule.map(broadcast => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast);
@@ -161,6 +167,7 @@ client.on('messageCreate', async message => {
         }
     }
 
+    // Commande pour HF Conditions
     if (message.content === '!hfconditions') {
         try {
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
