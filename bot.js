@@ -1,11 +1,10 @@
 // Discord bot with NOAA API made by Discode Studio.
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
-const fs = require('fs');
 require('dotenv').config();
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
-const bbcSchedules = require('./bbc.json'); // Fichier JSON pour les horaires BBC
+const bbcSchedule = require('./bbc.json'); // Chargez le fichier bbc.json
 
 const client = new Client({
     intents: [
@@ -17,35 +16,22 @@ const client = new Client({
 
 // Fonction pour convertir l'heure en format "hhmm" en un format correct avec heures et minutes
 function convertTimeToUTC(time) {
-    const hours = time.slice(0, 2); // Extraire les deux premiers caractères pour les heures
-    const minutes = time.slice(2); // Extraire les deux derniers caractères pour les minutes
-    return { hours: parseInt(hours, 10), minutes: parseInt(minutes, 10) }; // Retourner un objet contenant heures et minutes
+    const hours = time.slice(0, 2);
+    const minutes = time.slice(2);
+    return { hours: parseInt(hours, 10), minutes: parseInt(minutes, 10) };
 }
 
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
     const now = new Date();
-    const [startTime] = schedule.time.split('-').map(time => convertTimeToUTC(time)); // Convertir "hhmm" en heures et minutes
-    let broadcastDate = new Date(now); // Partir de la date actuelle
+    const [startTime] = schedule.time.split('-').map(time => convertTimeToUTC(time));
+    let broadcastDate = new Date(now);
 
-    // Ajuster la date avec l'heure de début du programme
     broadcastDate.setUTCHours(startTime.hours);
-    broadcastDate.setUTCMinutes(startTime.minutes, 0, 0); // Minutes et secondes à 0
+    broadcastDate.setUTCMinutes(startTime.minutes, 0, 0);
 
-    // Si l'heure de diffusion est déjà passée aujourd'hui, on passe au lendemain
     if (broadcastDate < now) {
         broadcastDate.setUTCDate(broadcastDate.getUTCDate() + 1);
-    }
-
-    // Gestion spéciale pour "Music 4 Joy", qui ne diffuse que les mardi et jeudi
-    if (schedule.broadcaster === "Music 4 Joy") {
-        const dayOfWeek = broadcastDate.getUTCDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
-
-        // Si aujourd'hui n'est ni mardi ni jeudi, passer au prochain mardi ou jeudi
-        if (dayOfWeek !== 2 && dayOfWeek !== 4) {
-            const daysUntilNextBroadcast = (dayOfWeek < 2) ? 2 - dayOfWeek : 4 - dayOfWeek;
-            broadcastDate.setUTCDate(broadcastDate.getUTCDate() + daysUntilNextBroadcast);
-        }
     }
 
     return broadcastDate;
@@ -54,7 +40,7 @@ function getNextBroadcastTime(schedule) {
 // Fonction pour calculer le temps restant avant le broadcast
 function formatTimeDifference(broadcastDate) {
     const now = new Date();
-    const timeDiff = broadcastDate - now; // Différence en millisecondes
+    const timeDiff = broadcastDate - now;
 
     const hours = Math.floor(timeDiff / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
@@ -67,7 +53,7 @@ function formatTimeDifference(broadcastDate) {
 
 client.on('messageCreate', async message => {
     if (message.content.startsWith('!drm ')) {
-        const args = message.content.slice(5).trim().toLowerCase(); // Mettre en minuscule
+        const args = message.content.slice(5).trim().toLowerCase();
         const supportedLanguages = ["german", "french", "english", "arabic", "italian", "spanish", "multi", "tamil", "chinese", "mandarin", "korean", "hindi", "balushi", "urdu"];
         
         if (!supportedLanguages.includes(args)) {
@@ -75,16 +61,14 @@ client.on('messageCreate', async message => {
             return;
         }
 
-        // Chercher l'entrée correspondante dans le fichier JSON
         const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
 
         if (nextSchedule) {
-            const nextBroadcastTime = getNextBroadcastTime(nextSchedule); // Utiliser la fonction pour ajuster la date
-            const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
+            const nextBroadcastTime = getNextBroadcastTime(nextSchedule);
+            const formattedTime = formatTimeDifference(nextBroadcastTime);
 
-            // Création de l'embed
             const embed = new EmbedBuilder()
-                .setColor(0x1E90FF) // Bleu
+                .setColor(0x1E90FF)
                 .setTitle(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
                 .addFields(
                     { name: 'Time (UTC/GMT)', value: `${nextSchedule.time}${formattedTime}`, inline: true },
@@ -92,7 +76,7 @@ client.on('messageCreate', async message => {
                     { name: 'Frequency', value: nextSchedule.frequency, inline: true },
                     { name: 'Target', value: nextSchedule.target, inline: true }
                 )
-                .setTimestamp(); // Ajoute un timestamp de génération
+                .setTimestamp();
 
             message.channel.send({ embeds: [embed] });
         } else {
@@ -102,18 +86,74 @@ client.on('messageCreate', async message => {
 
     if (message.content === '!drmschedule') {
         const scheduleMessage = drmSchedule.map(broadcast => {
-            const nextBroadcastTime = getNextBroadcastTime(broadcast); // Utiliser la fonction pour ajuster la date
-            const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
+            const nextBroadcastTime = getNextBroadcastTime(broadcast);
+            const formattedTime = formatTimeDifference(nextBroadcastTime);
 
             return `Time: ${broadcast.time} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
         }).filter(Boolean).join('\n');
 
         if (scheduleMessage.length > 0) {
             const embed = new EmbedBuilder()
-                .setColor(0x1E90FF) // Bleu
+                .setColor(0x1E90FF)
                 .setTitle('Broadcast Schedule')
                 .setDescription(scheduleMessage)
-                .setTimestamp(); // Ajoute un timestamp
+                .setTimestamp();
+
+            message.channel.send({ embeds: [embed] });
+        } else {
+            message.channel.send(`There is no broadcast schedule available.`);
+        }
+    }
+
+    // Commandes pour BBC
+    if (message.content.startsWith('!bbc ')) {
+        const args = message.content.slice(5).trim().toLowerCase();
+        
+        // Vous pouvez adapter le tableau des langues selon vos besoins
+        const supportedLanguagesBBC = ["english", "french", "spanish", "arabic", "mandarin"];
+        
+        if (!supportedLanguagesBBC.includes(args)) {
+            message.channel.send(`There is no broadcast schedule available for "${args}".`);
+            return;
+        }
+
+        const nextBBCSchedule = bbcSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
+
+        if (nextBBCSchedule) {
+            const nextBroadcastTime = getNextBroadcastTime(nextBBCSchedule);
+            const formattedTime = formatTimeDifference(nextBroadcastTime);
+
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF)
+                .setTitle(`Next BBC broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
+                .addFields(
+                    { name: 'Time (UTC/GMT)', value: `${nextBBCSchedule.time}${formattedTime}`, inline: true },
+                    { name: 'Broadcaster', value: nextBBCSchedule.broadcaster, inline: true },
+                    { name: 'Frequency', value: nextBBCSchedule.frequency, inline: true },
+                    { name: 'Target', value: nextBBCSchedule.target, inline: true }
+                )
+                .setTimestamp();
+
+            message.channel.send({ embeds: [embed] });
+        } else {
+            message.channel.send(`There is no upcoming BBC broadcast in ${args}.`);
+        }
+    }
+
+    if (message.content === '!bbcschedule') {
+        const scheduleMessage = bbcSchedule.map(broadcast => {
+            const nextBroadcastTime = getNextBroadcastTime(broadcast);
+            const formattedTime = formatTimeDifference(nextBroadcastTime);
+
+            return `Time: ${broadcast.time} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
+        }).filter(Boolean).join('\n');
+
+        if (scheduleMessage.length > 0) {
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF)
+                .setTitle('BBC Broadcast Schedule')
+                .setDescription(scheduleMessage)
+                .setTimestamp();
 
             message.channel.send({ embeds: [embed] });
         } else {
@@ -123,55 +163,19 @@ client.on('messageCreate', async message => {
 
     if (message.content === '!hfconditions') {
         try {
-            // NOAA API
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
             const data = response.data;
 
-            // Création de l'embed pour les conditions HF
             const embed = new EmbedBuilder()
-                .setColor(0x1E90FF) // Bleu
+                .setColor(0x1E90FF)
                 .setTitle('Current HF conditions from NOAA')
                 .setDescription(`\`\`\`${data}\`\`\``)
-                .setTimestamp(); // Ajoute un timestamp
+                .setTimestamp();
 
             message.channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error fetching HF conditions:', error);
             message.channel.send('Failed to fetch HF conditions. Please try again later.');
-        }
-    }
-
-    // Commande pour afficher les horaires BBC
-    if (message.content === '!bbc') {
-        try {
-            const schedules = bbcSchedules; // On suppose que bbcSchedules est un tableau d'objets
-            const embed = new EmbedBuilder()
-                .setColor(0x1E90FF) // Bleu
-                .setTitle('BBC Schedules')
-                .setTimestamp()
-                .setFooter({ text: 'Retrieved from BBC JSON data.' });
-
-            schedules.forEach(schedule => {
-                const today = new Date();
-                const dayOfWeek = today.getUTCDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
-                const days = schedule.Days.split('').map(Number);
-                
-                // Vérifiez si le programme est actif aujourd'hui
-                if (days[dayOfWeek]) {
-                    embed.addFields([
-                        {
-                            name: `Station: ${schedule.Station}`,
-                            value: `Frequency: ${schedule.Freq} kHz\nStart: ${schedule.Start} UTC\nEnd: ${schedule.End} UTC\nLanguage: ${schedule.Language}\nTransmitter Site: ${schedule['Transmitter Site']}`,
-                            inline: false
-                        }
-                    ]);
-                }
-            });
-
-            message.channel.send({ embeds: [embed] });
-        } catch (error) {
-            console.error('Error reading BBC schedule:', error);
-            message.channel.send('Failed to fetch BBC schedules. Please try again later.');
         }
     }
 });
