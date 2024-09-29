@@ -1,9 +1,11 @@
 // Discord bot with NOAA API made by Discode Studio.
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
+const fs = require('fs');
 require('dotenv').config();
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
+const bbcSchedules = require('./bbc.json'); // Fichier JSON pour les horaires BBC
 
 const client = new Client({
     intents: [
@@ -136,6 +138,40 @@ client.on('messageCreate', async message => {
         } catch (error) {
             console.error('Error fetching HF conditions:', error);
             message.channel.send('Failed to fetch HF conditions. Please try again later.');
+        }
+    }
+
+    // Commande pour afficher les horaires BBC
+    if (message.content === '!bbc') {
+        try {
+            const schedules = bbcSchedules; // On suppose que bbcSchedules est un tableau d'objets
+            const embed = new EmbedBuilder()
+                .setColor(0x1E90FF) // Bleu
+                .setTitle('BBC Schedules')
+                .setTimestamp()
+                .setFooter({ text: 'Retrieved from BBC JSON data.' });
+
+            schedules.forEach(schedule => {
+                const today = new Date();
+                const dayOfWeek = today.getUTCDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+                const days = schedule.Days.split('').map(Number);
+                
+                // Vérifiez si le programme est actif aujourd'hui
+                if (days[dayOfWeek]) {
+                    embed.addFields([
+                        {
+                            name: `Station: ${schedule.Station}`,
+                            value: `Frequency: ${schedule.Freq} kHz\nStart: ${schedule.Start} UTC\nEnd: ${schedule.End} UTC\nLanguage: ${schedule.Language}\nTransmitter Site: ${schedule['Transmitter Site']}`,
+                            inline: false
+                        }
+                    ]);
+                }
+            });
+
+            message.channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error reading BBC schedule:', error);
+            message.channel.send('Failed to fetch BBC schedules. Please try again later.');
         }
     }
 });
