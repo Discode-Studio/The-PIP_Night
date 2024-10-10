@@ -1,8 +1,8 @@
 // Discord bot with NOAA API made by Discode Studio.
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
-require('dotenv').config();
 const xml2js = require('xml2js');
+require('dotenv').config();
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
 
@@ -42,7 +42,14 @@ function getNextBroadcastTime(schedule) {
 
         // Si aujourd'hui n'est ni mardi ni jeudi, passer au prochain mardi ou jeudi
         if (dayOfWeek !== 2 && dayOfWeek !== 4) {
-            const daysUntilNextBroadcast = (dayOfWeek < 2) ? 2 - dayOfWeek : 4 - dayOfWeek;
+            let daysUntilNextBroadcast;
+            if (dayOfWeek < 2) {
+                daysUntilNextBroadcast = 2 - dayOfWeek;
+            } else if (dayOfWeek < 4) {
+                daysUntilNextBroadcast = 4 - dayOfWeek;
+            } else {
+                daysUntilNextBroadcast = (2 + 7) - dayOfWeek; // Prochain mardi après samedi
+            }
             broadcastDate.setUTCDate(broadcastDate.getUTCDate() + daysUntilNextBroadcast);
         }
     }
@@ -71,15 +78,33 @@ async function getSolarData() {
         const xmlData = response.data;
 
         // Convertir XML en JSON
-        const result = await xml2js.parseStringPromise(xmlData, { explicitArray: false });
-        const solarData = result.solar;
+        const parser = new xml2js.Parser({ explicitArray: false });
+        const result = await parser.parseStringPromise(xmlData);
 
-        // Retourner les informations pertinentes pour la bande 80m-40m
-        const bandData = solarData.band[0]; // On suppose que la première entrée est la bande 80m-40m
-        const dayStatus = bandData.day[0];
-        const nightStatus = bandData.night[0];
+        // Naviguer jusqu'à calculatedconditions
+        const calculatedConditions = result.solar.solardata.calculatedconditions;
 
-        return { dayStatus, nightStatus };
+        if (!calculatedConditions || !calculatedConditions.band) {
+            console.error('Structure XML inattendue:', result);
+            return null;
+        }
+
+        // Assurer que band est toujours un tableau
+        const bands = Array.isArray(calculatedConditions.band) ? calculatedConditions.band : [calculatedConditions.band];
+
+        // Filtrer les bandes pour "80m-40m" et "day" et "night"
+        const band80m40mDay = bands.find(band => band.$.name === "80m-40m" && band.$.time === "day");
+        const band80m40mNight = bands.find(band => band.$.name === "80m-40m" && band.$.time === "night");
+
+        if (!band80m40mDay || !band80m40mNight) {
+            console.error('Les informations pour la bande 80m-40m sont manquantes.');
+            return null;
+        }
+
+        return {
+            dayStatus: band80m40mDay._ || band80m40mDay,
+            nightStatus: band80m40mNight._ || band80m40mNight
+        };
     } catch (error) {
         console.error('Error fetching solar data:', error);
         return null;
@@ -87,17 +112,25 @@ async function getSolarData() {
 }
 
 client.on('messageCreate', async message => {
-    if (message.content.startsWith('!drm ')) {
-        const args = message.content.slice(5).trim().toLowerCase(); // Mettre en minuscule
+    if (message.author.bot) return;
+
+    const prefix = '!';
+    if (!message.content.startsWith(prefix)) return;
+
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'drm') {
+        const language = args[0]?.toLowerCase();
         const supportedLanguages = ["german", "french", "english", "arabic", "italian", "spanish", "multi", "tamil", "chinese", "mandarin", "korean", "hindi", "balushi", "urdu"];
         
-        if (!supportedLanguages.includes(args)) {
-            message.channel.send(`There is no broadcast schedule available for "${args}".`);
+        if (!supportedLanguages.includes(language)) {
+            message.channel.send(`There is no broadcast schedule available for "${language}".`);
             return;
         }
 
         // Chercher l'entrée correspondante dans le fichier JSON
-        const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === args);
+        const nextSchedule = drmSchedule.find(broadcast => broadcast.language.toLowerCase() === language);
 
         if (nextSchedule) {
             const nextBroadcastTime = getNextBroadcastTime(nextSchedule); // Utiliser la fonction pour ajuster la date
@@ -106,7 +139,7 @@ client.on('messageCreate', async message => {
             // Création de l'embed
             const embed = new EmbedBuilder()
                 .setColor(0x1E90FF) // Bleu
-                .setTitle(`Next broadcast in ${args.charAt(0).toUpperCase() + args.slice(1)}`)
+                .setTitle(`Next broadcast in ${language.charAt(0).toUpperCase() + language.slice(1)}`)
                 .addFields(
                     { name: 'Time (UTC/GMT)', value: `${nextSchedule.time}${formattedTime}`, inline: true },
                     { name: 'Broadcaster', value: nextSchedule.broadcaster, inline: true },
@@ -117,17 +150,17 @@ client.on('messageCreate', async message => {
 
             message.channel.send({ embeds: [embed] });
         } else {
-            message.channel.send(`There is no upcoming broadcast in ${args}.`);
+            message.channel.send(`There is no upcoming broadcast in ${language}.`);
         }
     }
 
-    if (message.content === '!drmschedule') {
+    if (command === 'drmschedule') {
         const scheduleMessage = drmSchedule.map(broadcast => {
             const nextBroadcastTime = getNextBroadcastTime(broadcast); // Utiliser la fonction pour ajuster la date
             const formattedTime = formatTimeDifference(nextBroadcastTime); // Obtenir le temps formaté
 
             return `Time: ${broadcast.time} (UTC/GMT)${formattedTime}, Broadcaster: ${broadcast.broadcaster}, Frequency: ${broadcast.frequency}, Language: ${broadcast.language}`;
-        }).filter(Boolean).join('\n');
+        }).join('\n');
 
         if (scheduleMessage.length > 0) {
             const embed = new EmbedBuilder()
@@ -142,7 +175,7 @@ client.on('messageCreate', async message => {
         }
     }
 
-    if (message.content === '!hfconditions') {
+    if (command === 'hfconditions') {
         try {
             // NOAA API
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
@@ -162,8 +195,7 @@ client.on('messageCreate', async message => {
         }
     }
 
-    // Ajout de la commande !solar directement dans messageCreate
-    if (message.content === '!solar') {
+    if (command === 'solar') {
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
@@ -179,7 +211,7 @@ client.on('messageCreate', async message => {
                 { name: 'Night', value: solarInfo.nightStatus, inline: true }
             )
             .setTimestamp()
-            .setFooter('Data retrieved from hamqsl.com');
+            .setFooter({ text: 'Data retrieved from hamqsl.com' }); // Utiliser setFooter correctement
 
         message.channel.send({ embeds: [solarEmbed] });
     }
