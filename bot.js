@@ -2,7 +2,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
-const { MessageEmbed } = require('discord.js');
 const xml2js = require('xml2js');
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
@@ -63,6 +62,28 @@ function formatTimeDifference(broadcastDate) {
     const dayLabel = isToday ? 'today' : 'tomorrow';
 
     return `: ${dayLabel} at ${broadcastDate.getUTCHours().toString().padStart(2, '0')}:${broadcastDate.getUTCMinutes().toString().padStart(2, '0')}, in ${hours}h${minutes.toString().padStart(2, '0')}m`;
+}
+
+// Fonction pour récupérer les données solaires
+async function getSolarData() {
+    try {
+        const response = await axios.get('https://www.hamqsl.com/solarxml.php');
+        const xmlData = response.data;
+
+        // Convertir XML en JSON
+        const result = await xml2js.parseStringPromise(xmlData, { explicitArray: false });
+        const solarData = result.solar;
+
+        // Retourner les informations pertinentes pour la bande 80m-40m
+        const bandData = solarData.band[0]; // On suppose que la première entrée est la bande 80m-40m
+        const dayStatus = bandData.day[0];
+        const nightStatus = bandData.night[0];
+
+        return { dayStatus, nightStatus };
+    } catch (error) {
+        console.error('Error fetching solar data:', error);
+        return null;
+    }
 }
 
 client.on('messageCreate', async message => {
@@ -141,44 +162,17 @@ client.on('messageCreate', async message => {
         }
     }
 
-// Function to fetch and process solar data
-async function getSolarData() {
-    try {
-        // Fetch data from the link
-        const response = await axios.get('https://www.hamqsl.com/solarxml.php');
-        const xmlData = response.data;
-
-        // Convert XML to JSON
-        const result = await xml2js.parseStringPromise(xmlData, { explicitArray: false });
-        const solarData = result.solar;
-
-        // Get info for the "80m-40m" band
-        const bandData = solarData.band[0]; // Assuming the first entry is "80m-40m"
-        const dayStatus = bandData.day[0];
-        const nightStatus = bandData.night[0];
-
-        // Return relevant information
-        return { dayStatus, nightStatus };
-    } catch (error) {
-        console.error('Error fetching solar data:', error);
-        return null;
-    }
-}
-
-// Discord command to display data in an embed
-module.exports = {
-    name: 'solar',
-    description: 'Shows the conditions for the 80m-40m band during day and night',
-    async execute(message, args) {
+    // Ajout de la commande !solar directement dans messageCreate
+    if (message.content === '!solar') {
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
             return message.channel.send('Unable to fetch solar information.');
         }
 
-        // Create the embed with the retrieved information
-        const solarEmbed = new MessageEmbed()
-            .setColor('#0099ff')
+        // Création de l'embed pour les données solaires
+        const solarEmbed = new EmbedBuilder()
+            .setColor(0x1E90FF) // Bleu
             .setTitle('Conditions for the 80m-40m band')
             .addFields(
                 { name: 'Day', value: solarInfo.dayStatus, inline: true },
@@ -187,10 +181,8 @@ module.exports = {
             .setTimestamp()
             .setFooter('Data retrieved from hamqsl.com');
 
-        // Send the embed to the channel
         message.channel.send({ embeds: [solarEmbed] });
-    },
-};
+    }
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN); // Assurez-vous que votre token est dans le fichier .env
