@@ -24,7 +24,7 @@ jobs:
     - name: installations
       run: |
        npm install discord.js dotenv axios
-       npm install axios cheerio
+       npm install axios cheerio xml2js
        
       
     - name: Run Discord Bot
