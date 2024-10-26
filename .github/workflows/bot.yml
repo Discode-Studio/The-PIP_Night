@@ -1,3 +1,10 @@
+name: UVB-76 BOT
+
+on:
+  schedule:
+    - cron: "1 */6 * * *"  # Toutes les 6 heures
+  workflow_dispatch:       # Permet de déclencher manuellement ce workflow
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,4 +37,3 @@ jobs:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       run: |
         node bot.js
-        
