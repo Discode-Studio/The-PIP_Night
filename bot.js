@@ -14,6 +14,25 @@ const client = new Client({
     ]
 });
 
+
+function getCurrentUTC() {
+    const now = new Date();
+    return now.toISOString().slice(0, 19).replace('T', ' '); // Renvoie une chaîne au format "YYYY-MM-DD HH:MM:SS"
+}
+
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+
+    const prefix = '!';
+    if (!message.content.startsWith(prefix)) return;
+
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'utc') {
+        const utcTime = getCurrentUTC();
+        message.channel.send(`The current UTC time is: ${utcTime}`);
+    }
 // Fonction pour convertir l'heure en format "hhmm" en un format correct avec heures et minutes
 function convertTimeToUTC(time) {
     const hours = time.slice(0, 2);
