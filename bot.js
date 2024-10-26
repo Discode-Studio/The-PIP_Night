@@ -2,6 +2,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const xml2js = require('xml2js');
+const fetch = require('node-fetch'); // Make sure to install this with `npm install node-fetch`
 require('dotenv').config();
 
 const drmSchedule = require('./drm_schedule.json'); // Assurez-vous que le chemin est correct
@@ -90,9 +91,7 @@ client.on('messageCreate', async message => {
             message.channel.send('Failed to fetch HF conditions. Please try again later.');
         }
     }
-
-    const fetch = require('node-fetch'); // Make sure to install this with `npm install node-fetch`
-
+    
 async function getSolarData() {
     try {
         const response = await fetch('https://www.hamqsl.com/solarjson.php'); // URL for solar conditions API
