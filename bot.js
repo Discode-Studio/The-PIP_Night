@@ -91,24 +91,51 @@ client.on('messageCreate', async message => {
         }
     }
 
-    if (command === 'solar') {
-        const solarInfo = await getSolarData();
+    const fetch = require('node-fetch'); // Make sure to install this with `npm install node-fetch`
 
-        if (!solarInfo) {
-            return message.channel.send('Unable to fetch solar information.');
-        }
+async function getSolarData() {
+    try {
+        const response = await fetch('https://www.hamqsl.com/solarjson.php'); // URL for solar conditions API
+        if (!response.ok) throw new Error('Error fetching solar data');
 
-        const solarEmbed = new EmbedBuilder()
-            .setColor(0x1E90FF)
-            .setTitle('Conditions for the 80m-40m band')
-            .addFields(
-                { name: 'Day', value: solarInfo.dayStatus, inline: true },
-                { name: 'Night', value: solarInfo.nightStatus, inline: true }
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Data retrieved from hamqsl.com' });
+        const data = await response.json();
 
-        message.channel.send({ embeds: [solarEmbed] });
+        // Return relevant solar data fields without interpretation
+        return {
+            SFI: data.solar.SFI, // Solar Flux Index
+            K: data.solar.K,     // K-index
+            A: data.solar.A,     // A-index
+            xray: data.solar.xray, // X-ray flux
+            sunspots: data.solar.sunspots // Number of sunspots
+        };
+    } catch (error) {
+        console.error('Error fetching solar data:', error);
+        return null;
+    }
+}
+
+// Code to execute the 'solar' command
+if (command === 'solar') {
+    const solarInfo = await getSolarData();
+
+    if (!solarInfo) {
+        return message.channel.send('Unable to fetch solar information.');
+    }
+
+    const solarEmbed = new EmbedBuilder()
+        .setColor(0x1E90FF)
+        .setTitle('Real-Time Solar Conditions')
+        .addFields(
+            { name: 'Solar Flux Index (SFI)', value: solarInfo.SFI.toString(), inline: true },
+            { name: 'K-index', value: solarInfo.K.toString(), inline: true },
+            { name: 'A-index', value: solarInfo.A.toString(), inline: true },
+            { name: 'X-ray Flux', value: solarInfo.xray, inline: true },
+            { name: 'Sunspots', value: solarInfo.sunspots.toString(), inline: true }
+        )
+        .setTimestamp()
+        .setFooter({ text: 'Data retrieved from hamqsl.com' });
+
+    message.channel.send({ embeds: [solarEmbed] });
     }
 });
 
