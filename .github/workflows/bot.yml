@@ -1,10 +1,3 @@
-name: UVB-76 BOT
-
-on:
-  schedule:
-    - cron: "1 */6 * * *"  # Toutes les 6 heures
-  workflow_dispatch:       # Permet de déclencher manuellement ce workflow
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,17 +11,23 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18' # Specify Node.js version here
+
     - name: log node.js
       run: npm init -y
 
-    - name: installations
+    - name: Install dependencies
       run: |
-       npm install discord.js dotenv axios
-       npm install axios cheerio xml2js
-       npm install node-fetch
+        npm install discord.js dotenv axios
+        npm install axios cheerio xml2js
+        npm install node-fetch
       
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       run: |
         node bot.js
+        
