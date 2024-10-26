@@ -38,6 +38,7 @@ client.on('messageCreate', async message => {
         const utcTime = getCurrentUTC();
         message.channel.send(`The current UTC time is: ${utcTime}`);
     }
+}
 
 // Fonction pour ajuster la date de diffusion au jour actuel ou au lendemain si l'heure est passée
 function getNextBroadcastTime(schedule) {
