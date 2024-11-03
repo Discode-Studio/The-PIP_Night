@@ -1,8 +1,7 @@
-const { EmbedBuilder, Colors } = require('discord.js'); // Mise à jour pour Colors
+const { EmbedBuilder, Colors } = require('discord.js');
 const https = require('https');
 const axios = require('axios');
 
-// Création de l'agent HTTPS avec des certificats non vérifiés
 const agent = new https.Agent({
     rejectUnauthorized: false
 });
@@ -14,10 +13,19 @@ async function getSolarData() {
             params: {
                 url: 'https://www.hamqsl.com/solarxml.php'
             },
-            httpsAgent: agent // Utilisation de l'agent ici
+            httpsAgent: agent
         });
         
         const jsonData = response.data;
+
+        // Affiche la structure des données pour le débogage
+        console.log("Structure des données JSON :", JSON.stringify(jsonData, null, 2));
+
+        // Vérification de la structure attendue dans jsonData
+        if (!jsonData.solar || !jsonData.solar.bands || !jsonData.solar.bands.band) {
+            console.error("La structure des données JSON est incorrecte.");
+            return null;
+        }
 
         // Accéder aux données des bandes "80m-40m" pour day et night
         const bands = jsonData.solar.bands.band;
@@ -46,18 +54,18 @@ module.exports = {
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
-            return message.channel.send('Impossible de récupérer les informations solaires.');
+            return message.channel.send("Impossible de récupérer les informations solaires.");
         }
 
         const solarEmbed = new EmbedBuilder()
-            .setColor(Colors.Blue) // Utilisation de Colors pour la couleur
-            .setTitle('Conditions pour la bande 80m-40m')
+            .setColor(Colors.Blue)
+            .setTitle("Conditions pour la bande 80m-40m")
             .addFields(
-                { name: 'Jour', value: solarInfo.dayStatus, inline: true },
-                { name: 'Nuit', value: solarInfo.nightStatus, inline: true }
+                { name: "Jour", value: solarInfo.dayStatus, inline: true },
+                { name: "Nuit", value: solarInfo.nightStatus, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Données récupérées depuis hamqsl.com' });
+            .setFooter({ text: "Données récupérées depuis hamqsl.com" });
 
         message.channel.send({ embeds: [solarEmbed] });
     }
