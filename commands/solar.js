@@ -17,16 +17,19 @@ async function getSolarData() {
         console.log("JSON Structure:", JSON.stringify(jsonData, null, 2));
 
         // Check the JSON structure
-        if (!jsonData.solar || !jsonData.solar.bands || !jsonData.solar.bands[0].band) {
+        if (!jsonData.solar || !jsonData.solar.solardata || !jsonData.solar.solardata[0].calculatedconditions) {
             console.error("The structure of the JSON data is incorrect.");
             return null;
         }
 
-        // Initialize objects to store statuses
+        // Initialize an object to store band conditions
         const solarConditions = {};
 
+        // Access the calculated conditions
+        const conditions = jsonData.solar.solardata[0].calculatedconditions[0].band;
+
         // Iterate over bands to extract data
-        jsonData.solar.bands[0].band.forEach(band => {
+        conditions.forEach(band => {
             const bandName = band.$.name;
             const bandTime = band.$.time;
             const bandData = band._;
