@@ -5,38 +5,48 @@ const xml2js = require('xml2js');
 
 async function getSolarData() {
     try {
-        // Récupérer le XML depuis l'URL
+        // Retrieve XML data from the URL
         const response = await axios.get('https://www.hamqsl.com/solarxml.php', {
             httpsAgent: new https.Agent({ rejectUnauthorized: false })
         });
 
-        // Convertir le XML en JSON
+        // Convert XML to JSON
         const jsonData = await xml2js.parseStringPromise(response.data);
 
-        // Vérifier la structure JSON obtenue
+        // Log to check the structure
+        console.log("JSON Structure:", JSON.stringify(jsonData, null, 2));
+
+        // Check the JSON structure
         if (!jsonData.solar || !jsonData.solar.bands || !jsonData.solar.bands[0].band) {
-            console.error("La structure des données JSON est incorrecte.");
+            console.error("The structure of the JSON data is incorrect.");
             return null;
         }
 
-        // Accéder aux données des bandes "80m-40m" pour jour et nuit
-        const bands = jsonData.solar.bands[0].band;
-        let dayStatus = '';
-        let nightStatus = '';
+        // Initialize objects to store statuses
+        const solarConditions = {};
 
-        bands.forEach(band => {
-            if (band.name[0] === '80m-40m') {
-                dayStatus = band.day[0];
-                nightStatus = band.night[0];
+        // Iterate over bands to extract data
+        jsonData.solar.bands[0].band.forEach(band => {
+            const bandName = band.$.name;
+            const bandTime = band.$.time;
+            const bandData = band._;
+
+            // Initialize the object for the band if needed
+            if (!solarConditions[bandName]) {
+                solarConditions[bandName] = { day: '', night: '' };
+            }
+
+            // Assign data according to time (day/night)
+            if (bandTime === 'day') {
+                solarConditions[bandName].day = bandData;
+            } else if (bandTime === 'night') {
+                solarConditions[bandName].night = bandData;
             }
         });
-        
-        return {
-            dayStatus,
-            nightStatus
-        };
+
+        return solarConditions;
     } catch (error) {
-        console.error('Error retrieving solar data :', error);
+        console.error('Error retrieving solar data:', error);
         return null;
     }
 }
@@ -46,17 +56,22 @@ module.exports = {
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
-            return message.channel.send("Unable to retrieve solar information.");
-}
+            return message.channel.send("Unable to fetch solar information.");
+        }
+
         const solarEmbed = new EmbedBuilder()
             .setColor(Colors.Blue)
-            .setTitle("Conditions for the 80m-40m band")
-            .addFields(
-                { name: "Jour", value: solarInfo.dayStatus, inline: true },
-                { name: "Nuit", value: solarInfo.nightStatus, inline: true }
-            )
+            .setTitle("Solar Conditions")
             .setTimestamp()
             .setFooter({ text: "Data retrieved from hamqsl.com" });
+
+        // Add fields for each band
+        for (const [bandName, conditions] of Object.entries(solarInfo)) {
+            solarEmbed.addFields(
+                { name: `${bandName} (Day)`, value: conditions.day || 'No data available', inline: true },
+                { name: `${bandName} (Night)`, value: conditions.night || 'No data available', inline: true }
+            );
+        }
 
         message.channel.send({ embeds: [solarEmbed] });
     }
