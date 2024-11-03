@@ -1,14 +1,20 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, Colors } = require('discord.js'); // Mise à jour pour Colors
+const https = require('https');
 const axios = require('axios');
+
+// Création de l'agent HTTPS avec des certificats non vérifiés
+const agent = new https.Agent({
+    rejectUnauthorized: false
+});
 
 async function getSolarData() {
     try {
-        // Requête vers l'API XML-to-JSON pour transformer le XML en JSON
+        // Requête vers l'API XML-to-JSON en utilisant l'agent HTTPS
         const response = await axios.get('https://api.xmltojson.com/convert', {
             params: {
-                // URL de la source XML à convertir
                 url: 'https://www.hamqsl.com/solarxml.php'
-            }
+            },
+            httpsAgent: agent // Utilisation de l'agent ici
         });
         
         const jsonData = response.data;
@@ -40,18 +46,18 @@ module.exports = {
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
-            return message.channel.send('Unable to fetch solar information.');
+            return message.channel.send('Impossible de récupérer les informations solaires.');
         }
 
         const solarEmbed = new EmbedBuilder()
-            .setColor(0x1E90FF)
-            .setTitle('Conditions for the 80m-40m band')
+            .setColor(Colors.Blue) // Utilisation de Colors pour la couleur
+            .setTitle('Conditions pour la bande 80m-40m')
             .addFields(
-                { name: 'Day', value: solarInfo.dayStatus, inline: true },
-                { name: 'Night', value: solarInfo.nightStatus, inline: true }
+                { name: 'Jour', value: solarInfo.dayStatus, inline: true },
+                { name: 'Nuit', value: solarInfo.nightStatus, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Data retrieved from hamqsl.com' });
+            .setFooter({ text: 'Données récupérées depuis hamqsl.com' });
 
         message.channel.send({ embeds: [solarEmbed] });
     }
