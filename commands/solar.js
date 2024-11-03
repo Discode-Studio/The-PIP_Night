@@ -2,44 +2,39 @@ const { EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 
 async function getSolarData() {
-    const response = await fetch('https://www.hamqsl.com/solarxml.php');
-    
-    if (!response.ok) {
-        throw new Error('Erreur de récupération des données solaires');
-    }
-
-    const xmlText = await response.text();
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
-    
-    // Récupération des valeurs pour "day" et "night" dans la balise `band` avec `name="80m-40m"`
-    const bandElements = xmlDoc.querySelectorAll('band[name="80m-40m"]');
-    
-    let dayStatus = '';
-    let nightStatus = '';
-
-    bandElements.forEach(band => {
-        const day = band.querySelector('day');
-        const night = band.querySelector('night');
+    try {
+        // Requête vers l'API XML-to-JSON pour transformer le XML en JSON
+        const response = await axios.get('https://api.xmltojson.com/convert', {
+            params: {
+                // URL de la source XML à convertir
+                url: 'https://www.hamqsl.com/solarxml.php'
+            }
+        });
         
-        if (day && night) {
-            dayStatus = day.textContent;
-            nightStatus = night.textContent;
-        }
-    });
+        const jsonData = response.data;
 
-    return {
-        dayStatus,
-        nightStatus
-    };
+        // Accéder aux données des bandes "80m-40m" pour day et night
+        const bands = jsonData.solar.bands.band;
+        let dayStatus = '';
+        let nightStatus = '';
+
+        bands.forEach(band => {
+            if (band.name === '80m-40m') {
+                dayStatus = band.day;
+                nightStatus = band.night;
+            }
+        });
+
+        return {
+            dayStatus,
+            nightStatus
+        };
+    } catch (error) {
+        console.error('Erreur lors de la récupération des données solaires :', error);
+        return null;
+    }
 }
 
-// Appel de la fonction pour tester
-getSolarData().then(data => {
-    console.log(data);  // Affiche les statuts de jour et de nuit
-}).catch(error => {
-    console.error('Erreur:', error);
-});
 module.exports = {
     async execute(message) {
         const solarInfo = await getSolarData();
