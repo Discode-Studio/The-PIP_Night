@@ -31,6 +31,7 @@ jobs:
         npm install discord.js dotenv axios
         npm install axios cheerio xml2js
         npm install node-fetch
+        npm install xml2js
       
     - name: Run Discord Bot
       env:
