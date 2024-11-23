@@ -37,4 +37,4 @@ jobs:
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       run: |
-        node bot.js
+        node bot.js & node deploy-commands.js
