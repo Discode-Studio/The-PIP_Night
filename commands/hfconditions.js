@@ -3,12 +3,11 @@ const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('hf_conditions')
+        .setName('hfconditions')
         .setDescription('Fetches the current HF conditions from NOAA.'),
-
     async execute(interaction) {
         try {
-            await interaction.deferReply(); // Indique que le bot traite la commande
+            await interaction.deferReply();
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
             const data = response.data;
 
