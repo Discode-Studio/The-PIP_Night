@@ -36,5 +36,6 @@ jobs:
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
       run: |
         node bot.js & node deploy-commands.js
