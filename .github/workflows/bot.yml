@@ -9,6 +9,7 @@ jobs:
   # Job 1: Lancer le bot Discord
   run-bot:
     runs-on: windows-latest
+    needs: deploy-commands
 
     steps:
     - name: Checkout code
@@ -36,7 +37,6 @@ jobs:
   # Job 2: Déployer les commandes Discord
   deploy-commands:
     runs-on: windows-latest
-    needs: run-bot  # Ce job dépend du job 'run-bot'
 
     steps:
     - name: Checkout code
