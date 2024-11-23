@@ -1,9 +1,14 @@
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 
 module.exports = {
-    async execute(message) {
+    data: new SlashCommandBuilder()
+        .setName('hf_conditions')
+        .setDescription('Fetches the current HF conditions from NOAA.'),
+
+    async execute(interaction) {
         try {
+            await interaction.deferReply(); // Indique que le bot traite la commande
             const response = await axios.get('https://services.swpc.noaa.gov/text/wwv.txt');
             const data = response.data;
 
@@ -13,10 +18,10 @@ module.exports = {
                 .setDescription(`\`\`\`${data}\`\`\``)
                 .setTimestamp();
 
-            message.channel.send({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error fetching HF conditions:', error);
-            message.channel.send('Failed to fetch HF conditions. Please try again later.');
+            await interaction.editReply('Failed to fetch HF conditions. Please try again later.');
         }
-    }
+    },
 };
