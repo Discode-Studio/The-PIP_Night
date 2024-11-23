@@ -1,12 +1,11 @@
-// Commande pour UTC
-function getCurrentUTC() {
-    const now = new Date();
-    return now.toISOString().slice(0, 19).replace('T', ' ');
-}
+const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
-    execute(message) {
-        const utcTime = getCurrentUTC();
-        message.channel.send(`The current UTC time is: ${utcTime}`);
-    }
+    data: new SlashCommandBuilder()
+        .setName('utc')
+        .setDescription('Get the current UTC time.'),
+    async execute(interaction) {
+        const currentUTC = new Date().toISOString().replace('T', ' ').split('.')[0];
+        await interaction.reply(`🕒 Current UTC time: **${currentUTC}**`);
+    },
 };
