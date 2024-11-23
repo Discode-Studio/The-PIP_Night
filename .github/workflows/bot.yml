@@ -1,4 +1,4 @@
-name: UVB-76 BOT Windows 
+name: UVB-76 BOT Windows
 
 on:
   schedule:
@@ -6,36 +6,57 @@ on:
   workflow_dispatch:       # Permet de déclencher manuellement ce workflow
 
 jobs:
-  build:
+  # Job 1: Lancer le bot Discord
+  run-bot:
     runs-on: windows-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18' # Specify Node.js version here
+        node-version: '18'
 
-    - name: log node.js
-      run: npm init -y
- 
     - name: Install dependencies
       run: |
         npm install discord.js dotenv axios
         npm install axios cheerio xml2js
         npm install node-fetch
         npm install xml2js
-      
+
     - name: Run Discord Bot
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         CLIENT_ID: ${{ secrets.CLIENT_ID }}
       run: |
-        node bot.js & node deploy-commands.js
+        node bot.js
+
+  # Job 2: Déployer les commandes Discord
+  deploy-commands:
+    runs-on: windows-latest
+    needs: run-bot  # Ce job dépend du job 'run-bot'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        npm install discord.js dotenv axios
+        npm install axios cheerio xml2js
+        npm install node-fetch
+        npm install xml2js
+
+    - name: Deploy Discord Commands
+      env:
+        DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      run: |
+        node deploy-commands.js
