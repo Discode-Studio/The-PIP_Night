@@ -36,6 +36,7 @@ jobs:
 
   # Job 2: Déployer les commandes Discord
   deploy-commands:
+    runs-on: windows-latest
 
     steps:
     - name: Checkout code
