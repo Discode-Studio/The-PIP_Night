@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('utc time')
+        .setName('utc-time')
         .setDescription('Displays the current time in UTC with an optional offset..')
         .addIntegerOption(option =>
             option
