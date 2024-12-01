@@ -6,48 +6,40 @@ const xml2js = require('xml2js');
 // Fonction pour récupérer les données solaires
 async function getSolarData() {
     try {
-        // Récupérer les données XML depuis l'URL
         const response = await axios.get('https://www.hamqsl.com/solarxml.php', {
             httpsAgent: new https.Agent({ rejectUnauthorized: false })
         });
 
-        // Convertir le XML en JSON
         const jsonData = await xml2js.parseStringPromise(response.data);
 
-        // Vérifier la structure du JSON
         if (!jsonData.solar || !jsonData.solar.solardata || !jsonData.solar.solardata[0].calculatedconditions) {
-            console.error("La structure des données JSON est incorrecte.");
+            console.error("Structure JSON invalide.");
             return null;
         }
 
-        // Initialiser un objet pour stocker les conditions
         const solarConditions = {};
 
-        // Accéder aux conditions calculées
         const conditions = jsonData.solar.solardata[0].calculatedconditions[0].band;
 
-        // Extraire les données pour chaque bande
         conditions.forEach(band => {
             const bandName = band.$.name;
             const bandTime = band.$.time;
             const bandData = band._;
 
-            // Initialiser les données pour la bande si nécessaire
             if (!solarConditions[bandName]) {
-                solarConditions[bandName] = { day: '', night: '' };
+                solarConditions[bandName] = { day: 'No data', night: 'No data' };
             }
 
-            // Attribuer les données en fonction du moment (jour/nuit)
             if (bandTime === 'day') {
-                solarConditions[bandName].day = bandData;
+                solarConditions[bandName].day = bandData || 'No data';
             } else if (bandTime === 'night') {
-                solarConditions[bandName].night = bandData;
+                solarConditions[bandName].night = bandData || 'No data';
             }
         });
 
         return solarConditions;
     } catch (error) {
-        console.error('Erreur lors de la récupération des données solaires :', error);
+        console.error('Erreur lors de la récupération des données solaires :', error.message);
         return null;
     }
 }
@@ -55,28 +47,34 @@ async function getSolarData() {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('solar')
-        .setDescription('Get the current solar band conditions.'),
+        .setDescription('Get the current solar band conditions.')
+        .addBooleanOption(option =>
+            option
+                .setName('ephemeral')
+                .setDescription('Whether the reply should be visible only to you.')
+        ),
 
     async execute(interaction) {
-        await interaction.deferReply(); // Permet de traiter les données longues
+        const ephemeral = interaction.options.getBoolean('ephemeral') ?? false;
+
+        await interaction.deferReply({ ephemeral });
 
         const solarInfo = await getSolarData();
 
         if (!solarInfo) {
-            return interaction.editReply("❌ Unable to fetch solar information.");
+            return interaction.editReply("❌ Unable to fetch solar information. Please try again later.");
         }
 
         const solarEmbed = new EmbedBuilder()
             .setColor(Colors.Blue)
-            .setTitle("☀️ Solar Conditions")
+            .setTitle("☀️ Current Solar Band Conditions")
             .setTimestamp()
             .setFooter({ text: "Data retrieved from hamqsl.com" });
 
-        // Ajouter les informations pour chaque bande
         for (const [bandName, conditions] of Object.entries(solarInfo)) {
             solarEmbed.addFields(
-                { name: `${bandName} (Day)`, value: conditions.day || 'No data available', inline: true },
-                { name: `${bandName} (Night)`, value: conditions.night || 'No data available', inline: true }
+                { name: `${bandName} (Day)`, value: conditions.day, inline: true },
+                { name: `${bandName} (Night)`, value: conditions.night, inline: true }
             );
         }
 
