@@ -72,10 +72,11 @@ module.exports = {
             .setFooter({ text: "Data retrieved from hamqsl.com" });
 
         for (const [bandName, conditions] of Object.entries(solarInfo)) {
-            solarEmbed.addFields(
-                { name: `${bandName} (Day)`, value: conditions.day, inline: true },
-                { name: `${bandName} (Night)`, value: conditions.night, inline: true }
-            );
+            solarEmbed.addFields({
+                name: `${bandName}`,
+                value: `**Day:** ${conditions.day}\n**Night:** ${conditions.night}`,
+                inline: false
+            });
         }
 
         await interaction.editReply({ embeds: [solarEmbed] });
